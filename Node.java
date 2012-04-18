@@ -8,7 +8,7 @@ import java.util.HashMap;
 
 public class Node implements Serializable {
     
-    private static final FILENAME = "data";
+    private static final String FILENAME = "data";
     
     protected HashMap<Integer, MusicObject> data;
     
@@ -29,19 +29,17 @@ public class Node implements Serializable {
             oos.write(this.data);
             
             oos.close();
-            fos.close();
         } catch (IOException e) { e.printStackTrace(); }
     }
     
     protected void readFromFile() {
         try {
-            FileInputStreaInputStream fis = new FileInputStream(FILENAME);
+            FileInputStream fis = new FileInputStream(FILENAME);
             ObjectInputStream ois = new ObjectInputStream(fis);
             
             this.data = (HashMap<Integer, MusicObject>)ois.read(data);
             
-            oos.close();
-            fos.close();
+            ois.close();
         } catch (IOException e) { e.printStackTrace(); }
     }
 }
