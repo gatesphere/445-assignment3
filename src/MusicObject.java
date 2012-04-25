@@ -159,8 +159,8 @@ public class MusicObject implements Serializable {
       fis.setCharacterStream(cr);
       //fis.setEncoding("US-ASCII");
       saxParser.parse(fis, handler);
-    } catch (Exception e) {
-      System.out.println(f.getName());
+    } catch (Throwable e) {
+      //System.out.println(f.getName());
       //e.printStackTrace();
     }
     
