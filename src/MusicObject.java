@@ -3,20 +3,23 @@
 
 import java.io.*;
 import java.util.*;
+import java.util.concurrent.*;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
+import org.xml.sax.*;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
+import org.xml.sax.SAXParseException;
 import org.xml.sax.helpers.DefaultHandler;
 
 enum Mode {
   MODE_NONE, MODE_ARTIST, MODE_ALBUM_ARTIST, MODE_ALBUM, MODE_TRACK,
-  MODE_TITLE, MODE_YEAR, MODE_GENRE, MODE_TRACK_LENGTH
+  MODE_TITLE, MODE_YEAR, MODE_GENRE, MODE_TRACK_LENGTH, MODE_SONG
 }
 
 public class MusicObject implements Serializable {
   
-  private int id;
+  private String id;
   private String artist;
   private String album_artist;
   private String album;
@@ -26,7 +29,7 @@ public class MusicObject implements Serializable {
   private String genre;
   private int track_length;
   
-  public int getId() {return id;}
+  public String getId() {return id;}
   public String getArtist() {return artist;}
   public String getAlbumArtist() {return album_artist;}
   public String getAlbum() {return album;}
@@ -37,7 +40,7 @@ public class MusicObject implements Serializable {
   public int getTrackLength() {return track_length;}
   
   // setters... needed for factory method :(
-  public void setId(int id) {this.id = id;}
+  public void setId(String id) {this.id = id;}
   public void setArtist(String artist) {this.artist = artist;}
   public void setAlbumArtist(String album_artist) {this.album_artist = album_artist;}
   public void setAlbum(String album) {this.album = album;}
@@ -47,75 +50,121 @@ public class MusicObject implements Serializable {
   public void setGenre(String genre) {this.genre = genre;}
   public void setTrackLength(int track_length) {this.track_length = track_length;}
   
-  private MusicObject(){}                        
-  
-  public static MusicObject buildFromFile(File f, int id) {
-    final MusicObject mobj = new MusicObject();
-    try {
-      SAXParserFactory factory = SAXParserFactory.newInstance();
-      SAXParser saxParser = factory.newSAXParser();
-      
-      DefaultHandler handler = new DefaultHandler() {
-        Mode mode = Mode.MODE_NONE;
-        
-        public void startElement(String uri, String localName,String qName, 
-                Attributes attributes) throws SAXException {
-          //System.out.println("Start Element :" + qName);
-          if (qName.equalsIgnoreCase("SONG")) {}
-          if (qName.equalsIgnoreCase("ARTIST")) {mode = Mode.MODE_ARTIST;}
-          if (qName.equalsIgnoreCase("ALBUM_ARTIST")) {mode = Mode.MODE_ALBUM_ARTIST;}
-          if (qName.equalsIgnoreCase("ALBUM")) {mode = Mode.MODE_ALBUM;}
-          if (qName.equalsIgnoreCase("TRACK")) {mode = Mode.MODE_TRACK;}
-          if (qName.equalsIgnoreCase("TITLE")) {mode = Mode.MODE_TITLE;}
-          if (qName.equalsIgnoreCase("YEAR")) {mode = Mode.MODE_YEAR;}
-          if (qName.equalsIgnoreCase("GENRE")) {mode = Mode.MODE_GENRE;}
-          if (qName.equalsIgnoreCase("TRACK_LENGTH")) {mode = Mode.MODE_TRACK_LENGTH;}
-        }
-       
-        public void endElement(String uri, String localName,
-          String qName) throws SAXException {
-          //System.out.println("End Element :" + qName);
-        }
-       
-        public void characters(char ch[], int start, int length) throws SAXException {
-          // read info
-          switch(mode) {
-            case MODE_ARTIST:
-              mobj.setArtist(new String(ch));
-              break;
-            case MODE_ALBUM_ARTIST:
-              mobj.setAlbumArtist(new String(ch));
-              break;
-            case MODE_ALBUM:
-              mobj.setAlbum(new String(ch));
-              break;
-            case MODE_TRACK:
-              mobj.setTrack(Integer.parseInt(new String(ch)));
-              break;
-            case MODE_TITLE:
-              mobj.setTitle(new String(ch));
-              break;
-            case MODE_YEAR:
-              mobj.setYear(Integer.parseInt(new String(ch)));
-              break;
-            case MODE_GENRE:
-              mobj.setGenre(new String(ch));
-              break;
-            case MODE_TRACK_LENGTH:
-              mobj.setTrackLength(Integer.parseInt(new String(ch)));
-              break;
-            default:
-              break; // unnecessary, but for symmetry
-          }
-        }
-      };
-       
-      saxParser.parse(f, handler);
-    } catch (Exception e) {
-      e.printStackTrace();
+  public static MusicObject mobj;
+  public static final SAXParserFactory factory = SAXParserFactory.newInstance();
+  public static SAXParser saxParser;
+  public static final DefaultHandler handler = new DefaultHandler() {
+    Mode mode = Mode.MODE_NONE;
+    
+    public void startElement(String uri, String localName,String qName, 
+            Attributes attributes) throws SAXException {
+      //System.out.println("Start Element :" + qName);
+      if (localName.equalsIgnoreCase("SONG")) {mode = Mode.MODE_SONG;}
+      if (localName.equalsIgnoreCase("ARTIST")) {mode = Mode.MODE_ARTIST;}
+      if (localName.equalsIgnoreCase("ALBUM_ARTIST")) {mode = Mode.MODE_ALBUM_ARTIST;}
+      if (localName.equalsIgnoreCase("ALBUM")) {mode = Mode.MODE_ALBUM;}
+      if (localName.equalsIgnoreCase("TRACK")) {mode = Mode.MODE_TRACK;}
+      if (localName.equalsIgnoreCase("TITLE")) {mode = Mode.MODE_TITLE;}
+      if (localName.equalsIgnoreCase("YEAR")) {mode = Mode.MODE_YEAR;}
+      if (localName.equalsIgnoreCase("GENRE")) {mode = Mode.MODE_GENRE;}
+      if (localName.equalsIgnoreCase("TRACK_LENGTH")) {mode = Mode.MODE_TRACK_LENGTH;}
+    }
+   
+    public void endElement(String uri, String localName,
+      String qName) throws SAXException {
+      //System.out.println("End Element :" + qName);
+    }
+   
+    public void characters(char ch[], int start, int length) throws SAXException {
+      String s = new String(Arrays.copyOfRange(ch, start, start+length));
+      int x = 0;
+      //System.out.println("mode: " + mode + " s: " + s);
+      // read info
+      switch(mode) {
+        case MODE_ARTIST:
+          MusicObject.mobj.setArtist(s);
+          break;
+        case MODE_ALBUM_ARTIST:
+          MusicObject.mobj.setAlbumArtist(s);
+          break;
+        case MODE_ALBUM:
+          MusicObject.mobj.setAlbum(s);
+          break;
+        case MODE_TRACK:
+          x = 0; // default
+          try { x = Integer.parseInt(s); }
+          catch(Exception ex) {}
+          MusicObject.mobj.setTrack(x);
+          break;
+        case MODE_TITLE:
+          MusicObject.mobj.setTitle(s);
+          break;
+        case MODE_YEAR:
+          x = 0; // default
+          try { x = Integer.parseInt(s); }
+          catch(Exception ex) {}
+          MusicObject.mobj.setYear(x);
+          break;
+        case MODE_GENRE:
+          MusicObject.mobj.setGenre(s);
+          break;
+        case MODE_TRACK_LENGTH:
+          x = 0; // default
+          try { x = Integer.parseInt(s); }
+          catch(Exception ex) {}
+          MusicObject.mobj.setTrackLength(x);
+          break;
+        default:
+          break; // unnecessary, but for symmetry
+      }
+      mode = Mode.MODE_NONE;
     }
     
-    mobj.setId(id);
-    return mobj;
+    public void error(SAXParseException ex) {} 
+    public void fatalError(SAXParseException ex) {}        
+    public void warning(SAXParseException ex) {}
+  };
+    
+  
+  static {
+    try {
+      factory.setFeature("http://apache.org/xml/features/continue-after-fatal-error", true);
+      saxParser = factory.newSAXParser();
+    } catch (Exception ex) {}
+  }
+  
+  private MusicObject(){}                        
+  
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    sb.append("<mobj " + id + "\n");
+    sb.append("  artist: " + artist + "\n");
+    sb.append("  album_artist: " + album_artist + "\n");
+    sb.append("  album: " + album + "\n");
+    sb.append("  track: " + track + "\n");
+    sb.append("  title: " + title + "\n");
+    sb.append("  year: " + year + "\n");
+    sb.append("  genre: " + genre + "\n");
+    sb.append("  track_length: " + track_length + "\n");
+    sb.append(">");
+    return sb.toString();
+  }
+  
+  public static MusicObject buildFromFile(File f, String id) {
+    MusicObject.mobj = new MusicObject();
+    try {      
+      //InputSource fis = new InputSource(new FileInputStream(f));
+      InputSource fis = new InputSource();
+      Reader cr = new InputStreamReader(new FileInputStream(f));
+      fis.setCharacterStream(cr);
+      //fis.setEncoding("US-ASCII");
+      saxParser.parse(fis, handler);
+    } catch (Exception e) {
+      System.out.println(f.getName());
+      //e.printStackTrace();
+    }
+    
+    MusicObject.mobj.setId(id);
+    return MusicObject.mobj;
   }
 }

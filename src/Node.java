@@ -8,16 +8,17 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.HashMap;
+import java.util.concurrent.*;
 
 public class Node implements Serializable {
   
-  private static final String FILENAME = "data";
+  private static final String FILENAME = "data.bin";
   
-  protected ConcurrentHashMap<Integer, MusicObject> data;
+  protected ConcurrentHashMap<String, MusicObject> data;
   
   
   public Node() { 
-    this.data = new HashMap<Integer, MusicObject>();
+    this.data = new ConcurrentHashMap<String, MusicObject>();
   }
   
   public void addMusicObject(MusicObject song) {
@@ -41,7 +42,7 @@ public class Node implements Serializable {
       FileInputStream fis = new FileInputStream(FILENAME);
       ObjectInputStream ois = new ObjectInputStream(fis);
       
-      this.data = (HashMap<Integer, MusicObject>)ois.readObject();
+      this.data = (ConcurrentHashMap<String, MusicObject>)ois.readObject();
       
       ois.close();
     } catch (IOException e) { 
