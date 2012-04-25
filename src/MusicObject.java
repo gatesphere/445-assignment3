@@ -1,5 +1,4 @@
 // MusicObject class
-// Jacob Peck
 // 20120418
 
 import java.io.*;
@@ -11,9 +10,9 @@ import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
 enum Mode {
-    MODE_NONE, MODE_ARTIST, MODE_ALBUM_ARTIST, MODE_ALBUM, MODE_TRACK,
-    MODE_TITLE, MODE_YEAR, MODE_GENRE, MODE_TRACK_LENGTH
-  }
+  MODE_NONE, MODE_ARTIST, MODE_ALBUM_ARTIST, MODE_ALBUM, MODE_TRACK,
+  MODE_TITLE, MODE_YEAR, MODE_GENRE, MODE_TRACK_LENGTH
+}
 
 public class MusicObject implements Serializable {
   
