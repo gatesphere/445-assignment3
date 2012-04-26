@@ -12,7 +12,7 @@ import java.util.concurrent.*;
 
 public class Node implements Serializable {
   
-  private static final String FILENAME = "data.bin";
+  protected static final String FILENAME = "data.bin";
   
   protected ConcurrentHashMap<String, MusicObject> data;
   

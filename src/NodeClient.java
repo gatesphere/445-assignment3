@@ -9,12 +9,23 @@ public class NodeClient {
   
   public static void main(String[] args) {
     NodeClient nc = new NodeClient();
+
+	// Initialize node from cache or from data files
     System.out.println("Initializing the node...");
-    nc.loadFiles("data");
-    System.out.println("Node initialized...");
+	if ((new File(Node.FILENAME)).exists()) {
+		nc.node.readFromFile();
+		System.out.println("Node re-initialized...");
+	} else {
+		nc.loadFiles("data");
+		System.out.println("Node initialized...");
+	}	
     
     System.out.println("Node contains " + nc.getNode().data.size() + " entries.");
     //for(MusicObject m : nc.getNode().data.values()) System.out.println(m);
+	
+	// Persist node
+	nc.getNode().writeToFile();
+	System.out.println("Node persisted...");
   }
   
   public Node getNode() {return this.node;}
