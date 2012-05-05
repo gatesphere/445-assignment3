@@ -135,6 +135,19 @@ public class MusicObject implements Serializable {
   
   private MusicObject(){}                        
   
+  public MusicObject(String id, String artist, String album_artist, String album,
+                     int track, String title, int year, String genre, int track_length) {
+    this.id = id;
+    this.artist = artist;
+    this.album_artist = album_artist;
+    this.album = album;
+    this.track = track;
+    this.title = title;
+    this.year = year;
+    this.genre = genre;
+    this.track_length = track_length;
+  }
+  
   public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append("<mobj " + id + "\n");
