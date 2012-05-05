@@ -1,4 +1,4 @@
-// Client class
+/*// Client class
 // 20120429
 
 import java.util.*;
@@ -25,7 +25,7 @@ public class Client {
     return alist;
   }
   
-  public static <U> reduceValues(List<T> list, ReduceFunction<T, U> f) {
+  public static U reduceValues(List<T> list, ReduceFunction<T, U> f) {
     return ReduceFunction.operate(list);
   }
   
@@ -44,6 +44,6 @@ public class Client {
      }
    });
    System.out.println("Average track length in seconds for songs by Opeth is: " + avg_length);
-  */
   
-}
+  
+}*/
