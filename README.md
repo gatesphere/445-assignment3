@@ -103,3 +103,22 @@ key: c  = client
                    x
                    x
 ````
+
+## To do list:
+
+  * Client
+    * test
+  * Node
+    * test querying
+  * MusicObject
+    * test querying
+  * NodeServer
+    * Concurrent connection framework
+    * Request parsing
+      * Querying
+      * Leader notification
+      * Limiting results
+    * Store parsing
+      * Storing the object
+    * Kill command
+      * Exit, immediately
