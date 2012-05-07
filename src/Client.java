@@ -25,7 +25,7 @@ public class Client {
     return alist;
   }
   
-  public static <U> reduceValues(List<T> list, ReduceFunction<T, U> f) {
+  public static U reduceValues(List<T> list, ReduceFunction<T, U> f) {
     return ReduceFunction.operate(list);
   }
   
