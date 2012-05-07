@@ -9,7 +9,10 @@ import java.io.ObjectOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
+import java.io.File;
+import java.util.Map;
 import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.concurrent.*;
 
 /**
@@ -82,8 +85,34 @@ public class Node implements Serializable {
    */
   protected ArrayList<MusicObject> query(HashMap<String, String> filter) {
     ArrayList<MusicObject> resultset = new ArrayList<MusicObject>();
-    for(MusicObject m : data) {
+    for(Map.Entry<String, MusicObject> e : data.entrySet()) {
+      MusicObject m = e.getValue();
       if(m.matches(filter)) resultset.add(m);
+    }
+    return resultset;
+  }
+  
+  /**
+   * main - initialize node and save to file
+   */
+  public static void main(String[] args) {
+    Node node = new Node();
+    node.loadFiles("data");
+    node.writeToFile();
+  }
+   
+  /**
+   * Loads all of the files in dataDir into the node
+   */
+  private void loadFiles(String dataDir) {
+    File[] files = (new File(dataDir)).listFiles();
+    for(int i = 0; i < files.length; i++) {
+      try {
+        File f = files[i];
+        String id = f.getName().substring(0, f.getName().lastIndexOf('.'));
+        //System.out.println("Adding MusicObject: " + id);
+        this.addMusicObject(MusicObject.buildFromFile(f, id));
+      } catch (Exception ex) {continue;}
     }
   }
 }

@@ -197,7 +197,7 @@ public class Client {
     }
     
     // return it
-    req.close();
+    try{req.close();} catch(Exception ex) {}
     return retval;
   }
   
@@ -236,7 +236,7 @@ public class Client {
     
     // send query
     pwo.println(query);
-    req.close();
+    try{req.close();} catch(Exception ex) {}
   }
   
   // kill
@@ -262,6 +262,6 @@ public class Client {
     
     // send query
     pwo.println(query);
-    req.close();
+    try{req.close();} catch(Exception ex) {}
   }
 }
