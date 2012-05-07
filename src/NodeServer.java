@@ -21,19 +21,15 @@ public class NodeServer extends Thread {
 	/**
 	 * The socket connection for listening.
 	 */
-	private ServerSocketChannel svrsocket_chan;
+	private ServerSocket socket;
 	/**
 	 * A list of all connected nodes.
 	 */
-	private List<SocketChannel> servers;
+	private List<InetSocketAddress> servers;
 	/**
 	 * The persistent data node.
 	 */
 	private Node node;
-	/**
-	 * The request/response selector.
-	 */
-	private Selector selector;
 
 
 	/**
@@ -42,22 +38,13 @@ public class NodeServer extends Thread {
 	 * @param server_list_file The initial list of all known nodes.
 	 */
 	public NodeServer(int port, String server_list_file) {
+		/* Create TCP socket */
 		try {
-			this.selector = Selector.open();
-		} catch (IOException e) { e.printStackTrace(); }
-
-		/* Create TCP socket channel */
-		try {
-			this.svrsocket_chan = ServerSocketChannel.open();
-			this.svrsocket_chan.configureBlocking(false);
-			this.svrsocket_chan.socket().bind(new InetSocketAddress(port));
-			this.svrsocket_chan.register(this.selector, this.svrsocket_chan.validOps());
+			this.socket = new ServerSocket(port);
 		} catch (IOException e) { e.printStackTrace(); System.exit(1); } 
-		// Wait for channel to connect
-		//while (!this.svrsocket_chan.finishConnect()) { }
 
 		/* Connect to other servers */
-		this.servers = new ArrayList<SocketChannel>();
+		this.servers = new ArrayList<InetSocketAddress>();
 		// Get list of servers
 		Scanner server_list = null;
 		try {
@@ -67,81 +54,43 @@ public class NodeServer extends Thread {
 		while (server_list.hasNext()) {
 			String svr_host = server_list.next();
 			int svr_port = server_list.nextInt();
-			System.out.format("Connecting to: %s:%d\n", svr_host, svr_port);
-			try {
-				SocketChannel svr = SocketChannel.open();
-				svr.configureBlocking(false);
-				svr.connect(new InetSocketAddress(svr_host, svr_port));
-				// Wait for channel to connect
-				while (!svr.finishConnect()) { }
-				this.servers.add(svr);
-				svr.register(this.selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
-				System.out.format("[+] Connection established: %s:%d\n", svr_host, svr_port);
-			} catch (IOException e) { System.out.format("[!] %s: %s:%d\n", e.getMessage(), svr_host, svr_port); }
+			//try {
+			this.servers.add(new InetSocketAddress(svr_host, svr_port));
+				//System.out.format("[+] Connection established: %s:%d\n", svr_host, svr_port);
+			//} catch (IOException e) { System.out.format("[!] %s: %s:%d\n", e.getMessage(), svr_host, svr_port); }
 		}
 
 		/* Initialize node */
 		/*this.node = new Node();
 		this.node.readFromFile();*/
-
+	
 		this.start();
 	}
 
 	/**
-	 * Processes the requests and response.
+	 * Processes the requests.
 	 */
 	public void run() {
 		while (true) {
-			try { this.selector.select(); } 
+			Socket connection = null;
+			try { connection = this.socket.accept(); } 
 			catch (IOException e) { e.printStackTrace(); }
-
-			Iterator it = this.selector.selectedKeys().iterator();
-			while (it.hasNext()) {
-				SelectionKey key = (SelectionKey)it.next();
-				it.remove();
-				try {
-					if (key.isValid()) {
-						//if (key.isAcceptable()) { acceptRequest(key); }
-						if (key.isReadable()) { processRequest(key); }
-						//if (key.isWritable()) { processResponse(key); }
-					}
-				}
-				catch (IOException e) { 
-					e.printStackTrace(); 
-					key.cancel();
+			
+			// Determine origin
+			InetSocketAddress con_addr = new InetSocketAddress(connection.getInetAddress(), connection.getPort());
+			boolean from_client = true;
+			for (InetSocketAddress addr : this.servers) {
+				if (addr.getAddress().equals(con_addr.getAddress()) && (addr.getPort() == con_addr.getPort())) {
+					from_client = false; break;
 				}
 			}
+			// Process request
+			if (from_client) {
+				new ClientRequest(connection, this.node);	
+			} else { 
+				new NodeRequest(connection, this.node);
+			}
 		}
-		/*DataInputStream dis = new DataInputStream(this.socket.getInputStream());
-		DataOutputStream dos = new DataOutputStream(this.socket.getOutputStream());
-		
-		while (true) {
-			String request = "";
-			try {
-				req = dis.readUTF();
-			} catch (IOException e) { e.printStackTrace(); }
-
-			// @TODO Process actions
-			System.out.println(req);
-			
-			// @TODO Check status of all other nodes
-		}*/
-	}
-
-	private void acceptRequest(SelectionKey key) throws IOException {
-		System.out.println("Accepting request");
-	}
-
-	private void processRequest(SelectionKey key) throws IOException {
-		System.out.println("Procssing request");
-		SocketChannel sc = (SocketChannel)key.channel();
-		DataInputStream s = new DataInputStream(sc.socket().getInputStream());
-		String req = s.readUTF();
-		System.out.println(req);
-	}
-
-	private void processResponse(SelectionKey key) throws IOException {
-		System.out.println("Procssing response");
 	}
 
 	/**
@@ -160,7 +109,7 @@ public class NodeServer extends Thread {
 	 */
 	private List<MusicObject> queryAll(String query) {
 		List<MusicObject> results = new ArrayList<MusicObject>();//this.node.query(query);
-		for (SocketChannel sock : this.servers) {
+		for (InetSocketAddress sock : this.servers) {
 			// @TODO Send GET to all other nodes, receive List<MusicObject> through OOS
 		}
 		// @TODO Perform consensus
@@ -179,4 +128,44 @@ public class NodeServer extends Thread {
 		String server_list_file = (args.length > 1) ? args[1] : DEFAULT_SERVER_LIST;
 		new NodeServer(port, server_list_file);
 	}
+
+
+}
+
+class ClientRequest extends Thread {
+	Socket socket;
+
+	public ClientRequest(Socket connection, Node n) {
+		System.out.format("[+] Client Connection from: %s\n", connection.getInetAddress().toString());
+		this.socket = connection;
+		this.start();
+	}
+	
+	public void run() {
+		try {
+			DataInputStream dis = new DataInputStream(this.socket.getInputStream());
+			String request = dis.readUTF();
+			System.out.println(request);
+		} catch (IOException e) { e.printStackTrace(); }
+	}
+}
+
+class NodeRequest extends Thread {
+	//ForkJoinPool fjp;
+	Socket socket;
+
+	public NodeRequest(Socket connection, Node n) {
+		System.out.format("[+] Server Connection from: %s\n", connection.getInetAddress().toString());
+		this.socket = connection;
+		this.start();
+	}
+	
+	public void run() {
+		try {
+			DataInputStream dis = new DataInputStream(this.socket.getInputStream());
+			String request = dis.readUTF();
+			System.out.println(request);
+		} catch (IOException e) { e.printStackTrace(); }
+	}
+
 }
