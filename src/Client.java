@@ -1,4 +1,4 @@
-// Client class
+/*// Client class
 // 20120429
 
 import java.util.*;
@@ -44,6 +44,6 @@ public class Client {
      }
    });
    System.out.println("Average track length in seconds for songs by Opeth is: " + avg_length);
-  */
   
-}
+  
+}*/
