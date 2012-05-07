@@ -70,8 +70,18 @@ public class NodeServer extends Thread {
 	 * Processes the requests.
 	 */
 	public void run() {
+		DataInputStream dis = new DataInputStream(this.socket.getInputStream());
+		DataOutputStream dos = new DataOutputStream(this.socket.getOutputStream());
+		
 		while (true) {
-			// @TODO Receive requests and process actions
+			String request = "";
+			try {
+				req = dis.readUTF();
+			} catch (IOException e) { e.printStackTrace(); }
+
+			// @TODO Process actions
+			System.out.println(req);
+			
 			// @TODO Check status of all other nodes
 		}
 	}
