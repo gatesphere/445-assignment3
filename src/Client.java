@@ -160,10 +160,12 @@ public class Client {
       }
     }
     ObjectInputStream ois = null;
-    PrintWriter pwo = null;
+    //PrintWriter pwo = null;
+    DataOutputStream dos = null;
     try {
       ois = new ObjectInputStream(req.getInputStream());
-      pwo = new PrintWriter(req.getOutputStream());
+      //pwo = new PrintWriter(req.getOutputStream());
+      dos = new DataOutputStream(req.getOutputStream());
     } catch (Exception ex) {
       ex.printStackTrace();
     }
@@ -179,7 +181,7 @@ public class Client {
     System.out.println(query);
     
     // send query
-    pwo.println(query);
+    try{dos.writeUTF(query);} catch(Exception ex) {}
     
     // read in response
     ArrayList<MusicObject> retval = new ArrayList<MusicObject>();
@@ -212,9 +214,11 @@ public class Client {
         req = null;
       }
     }
-    PrintWriter pwo = null;
+    //PrintWriter pwo = null;
+    DataOutputStream dos = null;
     try {
-      pwo = new PrintWriter(req.getOutputStream());
+      //pwo = new PrintWriter(req.getOutputStream());
+      dos = new DataOutputStream(req.getOutputStream());
     } catch (Exception ex) {
       ex.printStackTrace();
     }
@@ -235,8 +239,11 @@ public class Client {
     System.out.println(query);
     
     // send query
-    pwo.println(query);
-    try{req.close();} catch(Exception ex) {}
+    //pwo.println(query);
+    try{
+      dos.writeUTF(query);
+      req.close();
+    } catch(Exception ex) {}
   }
   
   // kill
@@ -250,9 +257,10 @@ public class Client {
         req = null;
       }
     }
-    PrintWriter pwo = null;
+    //PrintWriter pwo = null;
+    DataOutputStream dos = null;
     try {
-      pwo = new PrintWriter(req.getOutputStream());
+      dos = new DataOutputStream(req.getOutputStream());
     } catch (Exception ex) {
       ex.printStackTrace();
     }
@@ -261,7 +269,10 @@ public class Client {
     String query = "KILL";
     
     // send query
-    pwo.println(query);
-    try{req.close();} catch(Exception ex) {}
+    //pwo.println(query);
+    try{
+      dos.writeUTF(query);
+      req.close();
+    } catch(Exception ex) {}
   }
 }
