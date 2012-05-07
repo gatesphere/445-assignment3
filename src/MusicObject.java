@@ -180,4 +180,40 @@ public class MusicObject implements Serializable {
     MusicObject.mobj.setId(id);
     return MusicObject.mobj;
   }
+  
+  public boolean matches(HashMap<String, String> filter) {
+    boolean match = true;
+    for(Map.Entry<String, String> e : filter.entrySet()) {
+      switch(e.getKey()) {
+        case "ARTIST":
+          match = (this.artist.equals(e.getValue()));
+          break;
+        case "ALBUM_ARTIST":
+          match = (this.album_artist.equals(e.getValue()));
+          break;
+        case "ALBUM":
+          match = (this.album.equals(e.getValue()));
+          break;
+        case "TRACK":
+          match = (this.album.toString().equals(e.getValue()));
+          break;
+        case "TITLE":
+          match = (this.album.equals(e.getValue()));
+          break;
+        case "YEAR":
+          match = (this.album.toString().equals(e.getValue()));
+          break;
+        case "GENRE":
+          match = (this.album.equals(e.getValue()));
+          break;
+        case "TRACK_LENGTH":
+          match = (this.album.toString().equals(e.getValue()));
+          break;
+        default:
+          break;
+      }
+      if(!match) break;
+    }
+    return match;
+  }
 }
