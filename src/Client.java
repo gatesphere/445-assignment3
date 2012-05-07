@@ -29,7 +29,7 @@ class MapReduce<T, U, W, V> {
 }
 
 public class Client {
-  private ArrayList<Socket> servers = new ArrayList<Socket>();
+  private ArrayList<InetSocketAddress> servers = new ArrayList<InetSocketAddress>();
   private final String SERVER_LIST_FILE_NAME = "servers.txt";
   
   public Client() {
@@ -38,7 +38,7 @@ public class Client {
       Scanner sc = new Scanner(f);
       while(sc.hasNextLine()) {
         Scanner tokenizer = new Scanner(sc.nextLine());
-        servers.add(new Socket(tokenizer.next(), Integer.parseInt(tokenizer.next())));
+        servers.add(new InetSocketAddress(tokenizer.next(), Integer.parseInt(tokenizer.next())));
       }
     } catch (Exception ex) {
       System.out.println("Something went wrong:");
@@ -150,7 +150,15 @@ public class Client {
   
   // query
   public ArrayList<MusicObject> query(String limit, HashMap<String, String> filter) {
-    Socket req = servers.get((int)Math.floor(Math.random() * 3)); // random server to request from
+    Socket req = null;
+    while(req == null) {
+      try {
+        InetSocketAddress sa = servers.get((int)Math.floor(Math.random() * servers.size()));
+        req = new Socket(sa.getAddress(), sa.getPort());
+      } catch (Exception ex) {
+        req = null;
+      }
+    }
     ObjectInputStream ois = null;
     PrintWriter pwo = null;
     try {
@@ -189,12 +197,21 @@ public class Client {
     }
     
     // return it
+    try{req.close();} catch(Exception ex) {}
     return retval;
   }
   
   // store
   public void store(MusicObject mobj) {
-    Socket req = servers.get((int)Math.floor(Math.random() * 3)); // random server to request from
+    Socket req = null;
+    while(req == null) {
+      try {
+        InetSocketAddress sa = servers.get((int)Math.floor(Math.random() * servers.size()));
+        req = new Socket(sa.getAddress(), sa.getPort());
+      } catch (Exception ex) {
+        req = null;
+      }
+    }
     PrintWriter pwo = null;
     try {
       pwo = new PrintWriter(req.getOutputStream());
@@ -219,11 +236,20 @@ public class Client {
     
     // send query
     pwo.println(query);
+    try{req.close();} catch(Exception ex) {}
   }
   
   // kill
   public void kill() {
-    Socket req = servers.get((int)Math.floor(Math.random() * 3));
+    Socket req = null;
+    while(req == null) {
+      try {
+        InetSocketAddress sa = servers.get((int)Math.floor(Math.random() * servers.size()));
+        req = new Socket(sa.getAddress(), sa.getPort());
+      } catch (Exception ex) {
+        req = null;
+      }
+    }
     PrintWriter pwo = null;
     try {
       pwo = new PrintWriter(req.getOutputStream());
@@ -236,5 +262,6 @@ public class Client {
     
     // send query
     pwo.println(query);
+    try{req.close();} catch(Exception ex) {}
   }
 }
