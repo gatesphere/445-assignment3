@@ -5,8 +5,11 @@
 
 import java.io.*;
 import java.net.*;
+import java.nio.*;
+import java.nio.channels.*;
 import java.util.Scanner;
 import java.util.List;
+import java.util.Iterator;
 import java.util.ArrayList;
 
 public class NodeServer extends Thread {
@@ -18,15 +21,19 @@ public class NodeServer extends Thread {
 	/**
 	 * The socket connection for listening.
 	 */
-	private ServerSocket socket;
+	private ServerSocketChannel svrsocket_chan;
 	/**
 	 * A list of all connected nodes.
 	 */
-	private List<Socket> servers;
+	private List<SocketChannel> servers;
 	/**
 	 * The persistent data node.
 	 */
 	private Node node;
+	/**
+	 * The request/response selector.
+	 */
+	private Selector selector;
 
 
 	/**
@@ -35,16 +42,26 @@ public class NodeServer extends Thread {
 	 * @param server_list_file The initial list of all known nodes.
 	 */
 	public NodeServer(int port, String server_list_file) {
-		/* Create TCP socket */
 		try {
-			this.socket = new ServerSocket(port);
+			this.selector = Selector.open();
+		} catch (IOException e) { e.printStackTrace(); }
+
+		/* Create TCP socket channel */
+		try {
+			this.svrsocket_chan = ServerSocketChannel.open();
+			this.svrsocket_chan.configureBlocking(false);
+			this.svrsocket_chan.socket().bind(new InetSocketAddress(port));
+			this.svrsocket_chan.register(this.selector, this.svrsocket_chan.validOps());
 		} catch (IOException e) { e.printStackTrace(); System.exit(1); } 
+		// Wait for channel to connect
+		//while (!this.svrsocket_chan.finishConnect()) { }
 
 		/* Connect to other servers */
-		this.servers = new ArrayList<Socket>();
+		this.servers = new ArrayList<SocketChannel>();
 		// Get list of servers
+		Scanner server_list = null;
 		try {
-			Scanner server_list = new Scanner(new File(server_list_file));
+			server_list = new Scanner(new File(server_list_file));
 		} catch (FileNotFoundException ex) { ex.printStackTrace(); System.exit(1); }
 		// Connect to servers and store socket connections
 		while (server_list.hasNext()) {
@@ -52,25 +69,50 @@ public class NodeServer extends Thread {
 			int svr_port = server_list.nextInt();
 			System.out.format("Connecting to: %s:%d\n", svr_host, svr_port);
 			try {
-				Socket svr = new Socket();
-				svr.connect(new InetSocketAddress(svr_host, svr_port), SERVER_CONNECT_TIMEOUT);
+				SocketChannel svr = SocketChannel.open();
+				svr.configureBlocking(false);
+				svr.connect(new InetSocketAddress(svr_host, svr_port));
+				// Wait for channel to connect
+				while (!svr.finishConnect()) { }
 				this.servers.add(svr);
+				svr.register(this.selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
 				System.out.format("[+] Connection established: %s:%d\n", svr_host, svr_port);
 			} catch (IOException e) { System.out.format("[!] %s: %s:%d\n", e.getMessage(), svr_host, svr_port); }
 		}
 
 		/* Initialize node */
-		this.node = new Node();
-		this.node.readFromFile();
+		/*this.node = new Node();
+		this.node.readFromFile();*/
 
 		this.start();
 	}
 
 	/**
-	 * Processes the requests.
+	 * Processes the requests and response.
 	 */
 	public void run() {
-		DataInputStream dis = new DataInputStream(this.socket.getInputStream());
+		while (true) {
+			try { this.selector.select(); } 
+			catch (IOException e) { e.printStackTrace(); }
+
+			Iterator it = this.selector.selectedKeys().iterator();
+			while (it.hasNext()) {
+				SelectionKey key = (SelectionKey)it.next();
+				it.remove();
+				try {
+					if (key.isValid()) {
+						//if (key.isAcceptable()) { acceptRequest(key); }
+						if (key.isReadable()) { processRequest(key); }
+						//if (key.isWritable()) { processResponse(key); }
+					}
+				}
+				catch (IOException e) { 
+					e.printStackTrace(); 
+					key.cancel();
+				}
+			}
+		}
+		/*DataInputStream dis = new DataInputStream(this.socket.getInputStream());
 		DataOutputStream dos = new DataOutputStream(this.socket.getOutputStream());
 		
 		while (true) {
@@ -83,7 +125,23 @@ public class NodeServer extends Thread {
 			System.out.println(req);
 			
 			// @TODO Check status of all other nodes
-		}
+		}*/
+	}
+
+	private void acceptRequest(SelectionKey key) throws IOException {
+		System.out.println("Accepting request");
+	}
+
+	private void processRequest(SelectionKey key) throws IOException {
+		System.out.println("Procssing request");
+		SocketChannel sc = (SocketChannel)key.channel();
+		DataInputStream s = new DataInputStream(sc.socket().getInputStream());
+		String req = s.readUTF();
+		System.out.println(req);
+	}
+
+	private void processResponse(SelectionKey key) throws IOException {
+		System.out.println("Procssing response");
 	}
 
 	/**
@@ -102,7 +160,7 @@ public class NodeServer extends Thread {
 	 */
 	private List<MusicObject> queryAll(String query) {
 		List<MusicObject> results = new ArrayList<MusicObject>();//this.node.query(query);
-		for (Socket sock : this.servers) {
+		for (SocketChannel sock : this.servers) {
 			// @TODO Send GET to all other nodes, receive List<MusicObject> through OOS
 		}
 		// @TODO Perform consensus
