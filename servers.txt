@@ -1,3 +1,3 @@
 moxie.oswego.edu 2697
-gee.oswego.edu 4321
+gee.oswego.edu 2697
 altair.oswego.edu 2697
