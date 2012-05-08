@@ -115,5 +115,4 @@ key: c  = client
   * NodeServer
     * Request parsing
       * Querying
-      * Leader notification
       * Limiting results

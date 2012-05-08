@@ -8,12 +8,12 @@ expect "Password:"
 send "$password\n"
 interact
 
-spawn ssh $user@moxie.cs.oswego.edu "cd /opt/445A/; ./build.sh"
+spawn ssh $user@altair.cs.oswego.edu "cd /opt/445A/; ./build.sh"
 expect "Password:"
 send "$password\n"
 interact
 
-spawn ssh $user@moxie.cs.oswego.edu "cd /opt/445A/; ./build.sh"
+spawn ssh $user@gee.cs.oswego.edu "cd /opt/445A/; ./build.sh"
 expect "Password:"
 send "$password\n"
 interact

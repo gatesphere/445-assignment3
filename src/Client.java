@@ -31,7 +31,7 @@ class MapReduce<T, U, W, V> {
 public class Client {
   private ArrayList<InetSocketAddress> servers = new ArrayList<InetSocketAddress>();
   private final String SERVER_LIST_FILE_NAME = "servers.txt";
-  private final int CONNECTION_TIMEOUT = 1000;
+  private final int CONNECTION_TIMEOUT = 2000;
 
   public Client() {
     try {
@@ -61,8 +61,10 @@ public class Client {
     try{Thread.sleep(500);} catch (Exception ex){}
     
     // kill
+    /*
     System.out.println("\n\nKilling a server...");
     c.kill();
+    */
     
     try{Thread.sleep(500);} catch (Exception ex){}
     
@@ -74,6 +76,7 @@ public class Client {
     mr1.reduce = new ReduceFunction<List<Integer>, Integer>() {
       public Integer operate(List<Integer> list) {
         int total = list.size();
+        if(total == 0) return 0;
         int accum = 0;
         for(Integer i : list) accum += i;
         return accum / total;
@@ -274,9 +277,11 @@ public class Client {
     }
     //PrintWriter pwo = null;
     DataOutputStream dos = null;
+    ObjectInputStream ois = null;
     try {
       //pwo = new PrintWriter(req.getOutputStream());
       dos = new DataOutputStream(req.getOutputStream());
+      ois = new ObjectInputStream(req.getInputStream());
     } catch (Exception ex) {
       ex.printStackTrace();
     }
@@ -300,6 +305,7 @@ public class Client {
     //pwo.println(query);
     try{
       dos.writeUTF(query);
+      ois.readObject();
       req.close();
     } catch(Exception ex) {}
   }

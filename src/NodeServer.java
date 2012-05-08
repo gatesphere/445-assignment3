@@ -152,7 +152,7 @@ public class NodeServer extends Thread {
    * @param request The request string
    * @todo Paxos? -- Karl
    */
-  public void putRequest(String request) {
+  public ArrayList<MusicObject> putRequest(String request) {
     Scanner sc = new Scanner(request);
     sc.next(); // throw away the PUT
     sc.useDelimiter(", ");
@@ -166,8 +166,12 @@ public class NodeServer extends Thread {
     int year = sc.nextInt();
     String genre = sc.next();
     int track_length = sc.nextInt();
-    this.node.addMusicObject(new MusicObject(id, artist, album_artist, album, track,
-                                             title, year, genre, track_length));
+    MusicObject mobj = new MusicObject(id, artist, album_artist, album, track,
+                                       title, year, genre, track_length);
+    this.node.addMusicObject(mobj);
+    ArrayList<MusicObject> retval = new ArrayList<MusicObject>();
+    retval.add(mobj);
+    return retval;
   }
   
   /**
@@ -184,8 +188,8 @@ public class NodeServer extends Thread {
    * @param request The request string
    * @todo This needs to be implemented.
    */
-  public void getRequest(String request) {
-  
+  public ArrayList<MusicObject> getRequest(String request) {
+    return new ArrayList<MusicObject>();
   }
 }
 
@@ -193,6 +197,7 @@ public class NodeServer extends Thread {
 class ClientRequest extends Thread {
   Socket socket;
   NodeServer svr;
+  ArrayList<MusicObject> resultset = null;
 
   public ClientRequest(Socket connection, NodeServer svr) {
     System.out.format("\n[C] Client request from: %s\n", connection.getInetAddress().toString());
@@ -203,8 +208,9 @@ class ClientRequest extends Thread {
   
   public void run() {
     try {
+      System.out.println("[.] Grabbing ObjectOutputStream");
+      ObjectOutputStream oos = new ObjectOutputStream(this.socket.getOutputStream());
       System.out.println("[.] Grabbing DataInputStream");
-      ObjectOutputStream ois = new ObjectOutputStream(this.socket.getOutputStream());
       DataInputStream dis = new DataInputStream(this.socket.getInputStream());
       String request = dis.readUTF();
       System.out.println(request);
@@ -216,17 +222,23 @@ class ClientRequest extends Thread {
         try {
           s.connect(addr, NodeServer.SERVER_CONNECT_TIMEOUT);
           //s = new Socket(addr.getAddress(), addr.getPort(), svr.getLocalAddress().getAddress(), svr.getLocalAddress().getPort());
-        } catch (ConnectException e) {
+          System.out.println("[.] Grabbing DataOutputStream for " + addr);
+          DataOutputStream dos = new DataOutputStream(s.getOutputStream());
+          System.out.println("[.] Grabbing ObjectInputStream for " + addr);
+          ObjectInputStream ois = new ObjectInputStream(s.getInputStream());
+          // @TODO Determine correct action based on request
+          dos.writeUTF(request);
+          try{ois.readObject();} catch (Exception ex) {}
+          // @TODO Perform consensus
+        } catch (Exception e) {
           System.err.format("[!] Connection failed: %s\n", addr.toString());  
           continue;
         }
-        System.out.println("[.] Grabbing DataOutputStream for " + addr);
-        DataOutputStream dos = new DataOutputStream(s.getOutputStream());
-        // @TODO Determine correct action based on request
-        dos.writeUTF(request);
-        // @TODO Perform consensus
       }
       parseRequest(request);
+      if(resultset != null) {
+        oos.writeObject(resultset);
+      }
     } catch (IOException e) { e.printStackTrace(); }
   }
   
@@ -234,13 +246,13 @@ class ClientRequest extends Thread {
     Scanner sc = new Scanner(request);
     switch(sc.next()) {
       case "PUT":
-        svr.putRequest(request);
+        resultset = svr.putRequest(request);
         break;
       case "KILL":
         svr.killRequest(request);
         break;
       case "GET":
-        svr.getRequest(request);
+        resultset = svr.getRequest(request);
         break;
     }
   }
@@ -251,6 +263,7 @@ class NodeRequest extends Thread {
   //ForkJoinPool fjp;
   Socket socket;
   NodeServer svr;
+  ArrayList<MusicObject> resultset = null;
 
   public NodeRequest(Socket connection, NodeServer svr) {
     System.out.format("\n[N] Node request from: %s\n", connection.getInetAddress().toString());
@@ -260,11 +273,18 @@ class NodeRequest extends Thread {
   }
   
   public void run() {
+    System.out.println("Started.");
     try {
+      System.out.println("[.] Grabbing DataInputStream");
       DataInputStream dis = new DataInputStream(this.socket.getInputStream());
+      System.out.println("[.] Grabbing ObjectOutputStream");
+      ObjectOutputStream ois = new ObjectOutputStream(this.socket.getOutputStream());
       String request = dis.readUTF();
       System.out.println(request);
       parseRequest(request);
+      if(resultset != null) {
+        ois.writeObject(resultset);
+      }
     } catch (IOException e) { e.printStackTrace(); }
   }
   
@@ -272,13 +292,13 @@ class NodeRequest extends Thread {
     Scanner sc = new Scanner(request);
     switch(sc.next()) {
       case "PUT":
-        svr.putRequest(request);
+        resultset = svr.putRequest(request);
         break;
       case "KILL":
         svr.killRequest(request);
         break;
       case "GET":
-        svr.getRequest(request);
+        resultset = svr.getRequest(request);
         break;
     }
   }
