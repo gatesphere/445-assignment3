@@ -70,8 +70,8 @@ public class NodeServer extends Thread {
     System.out.println("---------------------------------------------------");
 
     /* Initialize node */
-    /*this.node = new Node();
-    this.node.readFromFile();*/
+    this.node = new Node();
+    this.node.readFromFile();
   
     this.start();
   }
@@ -146,6 +146,47 @@ public class NodeServer extends Thread {
     String server_list_file = (args.length > 1) ? args[1] : DEFAULT_SERVER_LIST;
     new NodeServer(port, server_list_file);
   }
+  
+  /**
+   * Handles a PUT request
+   * @param request The request string
+   * @todo Paxos? -- Karl
+   */
+  public void putRequest(String request) {
+    Scanner sc = new Scanner(request);
+    sc.next(); // throw away the PUT
+    sc.useDelimiter(", ");
+    String timestamp = sc.next();
+    String id = sc.next();
+    String artist = sc.next();
+    String album_artist = sc.next();
+    String album = sc.next();
+    int track = sc.nextInt();
+    String title = sc.next();
+    int year = sc.nextInt();
+    String genre = sc.next();
+    int track_length = sc.nextInt();
+    this.node.addMusicObject(new MusicObject(id, artist, album_artist, album, track,
+                                             title, year, genre, track_length));
+  }
+  
+  /**
+   * Handles a KILL request
+   * @param request The request string
+   */
+  public void killRequest(String request) {
+    // catastropic failure... die immediately
+    System.exit(-1);
+  }
+  
+  /**
+   * Handles a GET request
+   * @param request The request string
+   * @todo This needs to be implemented.
+   */
+  public void getRequest(String request) {
+  
+  }
 }
 
 
@@ -165,6 +206,8 @@ class ClientRequest extends Thread {
       DataInputStream dis = new DataInputStream(this.socket.getInputStream());
       String request = dis.readUTF();
       System.out.println(request);
+      
+      if(request.startsWith("KILL")) svr.killRequest(request);
 
       for (InetSocketAddress addr : svr.getServers()) {
         Socket s = new Socket();
@@ -180,7 +223,23 @@ class ClientRequest extends Thread {
         dos.writeUTF(request);
         // @TODO Perform consensus
       }
+      parseRequest(request);
     } catch (IOException e) { e.printStackTrace(); }
+  }
+  
+  public void parseRequest(String request) {
+    Scanner sc = new Scanner(request);
+    switch(sc.next()) {
+      case "PUT":
+        svr.putRequest(request);
+        break;
+      case "KILL":
+        svr.killRequest(request);
+        break;
+      case "GET":
+        svr.getRequest(request);
+        break;
+    }
   }
 }
 
@@ -202,7 +261,22 @@ class NodeRequest extends Thread {
       DataInputStream dis = new DataInputStream(this.socket.getInputStream());
       String request = dis.readUTF();
       System.out.println(request);
+      parseRequest(request);
     } catch (IOException e) { e.printStackTrace(); }
   }
-
+  
+  public void parseRequest(String request) {
+    Scanner sc = new Scanner(request);
+    switch(sc.next()) {
+      case "PUT":
+        svr.putRequest(request);
+        break;
+      case "KILL":
+        svr.killRequest(request);
+        break;
+      case "GET":
+        svr.getRequest(request);
+        break;
+    }
+  }
 }

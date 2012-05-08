@@ -57,6 +57,10 @@ public class Client {
                                        "Some Album", 3, "Some Title", 2012, "Some Genre", 323);
     c.store(mobj);
     
+    // kill
+    System.out.println("\n\nKilling a server...");
+    c.kill();
+    
     // map reduce 1
     MapReduce<MusicObject, Integer, List<Integer>, Integer> mr1 = new MapReduce<MusicObject, Integer, List<Integer>, Integer>();
     mr1.map = new MapFunction<MusicObject, Integer>() {
