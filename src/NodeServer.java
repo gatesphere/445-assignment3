@@ -176,7 +176,7 @@ public class NodeServer extends Thread {
    */
   public void killRequest(String request) {
     // catastropic failure... die immediately
-    System.exit(-1);
+    Runtime.getRuntime().halt(-1);
   }
   
   /**
