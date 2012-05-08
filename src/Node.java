@@ -13,6 +13,7 @@ import java.io.File;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.concurrent.*;
 
 /**
@@ -83,8 +84,8 @@ public class Node implements Serializable {
    * Query for data.
    * filter - a HashMap<String,String> for matching against.
    */
-  protected ArrayList<MusicObject> query(HashMap<String, String> filter) {
-    ArrayList<MusicObject> resultset = new ArrayList<MusicObject>();
+  protected Collection<MusicObject> query(HashMap<String, String> filter) {
+    Collection<MusicObject> resultset = new ArrayList<MusicObject>();
     for(Map.Entry<String, MusicObject> e : data.entrySet()) {
       MusicObject m = e.getValue();
       if(m.matches(filter)) resultset.add(m);
