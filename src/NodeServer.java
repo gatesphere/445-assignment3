@@ -198,6 +198,8 @@ class ClientRequest extends Thread {
   Socket socket;
   NodeServer svr;
   ArrayList<MusicObject> resultset = null;
+  int limit = 0;
+  ArrayList<ArrayList<MusicObject>> returnedValues = new ArrayList<ArrayList<MusicObject>>();
 
   public ClientRequest(Socket connection, NodeServer svr) {
     System.out.format("\n[C] Client request from: %s\n", connection.getInetAddress().toString());
@@ -216,7 +218,20 @@ class ClientRequest extends Thread {
       System.out.println(request);
       
       if(request.startsWith("KILL")) svr.killRequest(request);
-
+      if(request.startsWith("GET")) {
+        Scanner sc = new Scanner(request);
+        sc.next(); // strip off GET
+        String lim = sc.next();
+        if(lim.equals("ALL")) this.limit = 0;
+        else {
+          try{this.limit = Integer.parseInt(lim);}
+          catch (NumberFormatException ex) {
+            this.limit = 0;
+          }
+        }
+        request = request.replaceFirst(lim, "ALL");
+      }
+      
       for (InetSocketAddress addr : svr.getServers()) {
         Socket s = new Socket();
         try {
@@ -228,7 +243,7 @@ class ClientRequest extends Thread {
           ObjectInputStream ois = new ObjectInputStream(s.getInputStream());
           // @TODO Determine correct action based on request
           dos.writeUTF(request);
-          try{ois.readObject();} catch (Exception ex) {}
+          try{addResponse(ois.readObject());} catch (Exception ex) {}
           // @TODO Perform consensus
         } catch (Exception e) {
           System.err.format("[!] Connection failed: %s\n", addr.toString());  
@@ -236,10 +251,40 @@ class ClientRequest extends Thread {
         }
       }
       parseRequest(request);
+      agree();
       if(resultset != null) {
         oos.writeObject(resultset);
       }
     } catch (IOException e) { e.printStackTrace(); }
+  }
+  
+  public void addResponse(Object o) {
+    @SuppressWarnings("unchecked")
+    ArrayList<Object> list = (ArrayList<Object>)o;
+    ArrayList<MusicObject> m = new ArrayList<MusicObject>();
+    for(Object obj : list) {
+      m.add((MusicObject)obj);
+    }
+    this.returnedValues.add(m);
+  }
+  
+  public void agree() {
+    ArrayList<MusicObject> final_list = new ArrayList<MusicObject>();
+    int nodesNeeded = (returnedValues.size()/2)+1;
+    int i = 0;
+    int index = 0;
+    while((i < limit || limit == 0) & (index < resultset.size())) {
+      MusicObject m = this.resultset.get(index++);
+      int agreedNodes = 1;
+      for(ArrayList<MusicObject> a : returnedValues) {
+        if(a.contains(m)) agreedNodes++;
+      }
+      if(agreedNodes >= nodesNeeded) {
+        final_list.add(m);
+        i++;
+      }
+    }
+    this.resultset = final_list;
   }
   
   public void parseRequest(String request) {
