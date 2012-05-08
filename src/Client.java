@@ -31,7 +31,8 @@ class MapReduce<T, U, W, V> {
 public class Client {
   private ArrayList<InetSocketAddress> servers = new ArrayList<InetSocketAddress>();
   private final String SERVER_LIST_FILE_NAME = "servers.txt";
-  
+  private final int CONNECTION_TIMEOUT = 1000;
+
   public Client() {
     try {
       File f = new File(SERVER_LIST_FILE_NAME);
@@ -57,9 +58,13 @@ public class Client {
                                        "Some Album", 3, "Some Title", 2012, "Some Genre", 323);
     c.store(mobj);
     
+    try{Thread.sleep(500);} catch (Exception ex){}
+    
     // kill
     System.out.println("\n\nKilling a server...");
     c.kill();
+    
+    try{Thread.sleep(500);} catch (Exception ex){}
     
     // map reduce 1
     MapReduce<MusicObject, Integer, List<Integer>, Integer> mr1 = new MapReduce<MusicObject, Integer, List<Integer>, Integer>();
@@ -77,12 +82,22 @@ public class Client {
     System.out.println("\n\nMap/Reduce #1: average length in seconds of a song by Opeth:");
     HashMap<String, String> filter = new HashMap<String, String>();
     filter.put("ARTIST", "Opeth");
-    ArrayList<MusicObject> alist = c.query("ALL", filter);
+    ArrayList<MusicObject> alist = null;
+    while(alist == null) {
+      try{
+        alist = c.query("ALL", filter);
+      } catch (Exception ex) {
+        alist = null;
+        continue;
+      }
+    }
     // map
     List<Integer> track_lengths = mr1.callMap(alist);
     // reduce
     Integer avg_length = mr1.callReduce(track_lengths);
     System.out.println("Average length is: " + avg_length);
+    
+    try{Thread.sleep(500);} catch (Exception ex){}
     
     // map reduce 2
     MapReduce<MusicObject, Integer, List<Integer>, Integer> mr2 = new MapReduce<MusicObject, Integer, List<Integer>, Integer>();
@@ -107,12 +122,22 @@ public class Client {
     System.out.println("\n\nMap/Reduce #2: most active recording year for the Foo Fighters:");
     filter = new HashMap<String, String>();
     filter.put("ARTIST", "Foo Fighters");
-    alist = c.query("ALL", filter);
+    alist = null;
+    while(alist == null) {
+      try{
+        alist = c.query("ALL", filter);
+      } catch (Exception ex) {
+        alist = null;
+        continue;
+      }
+    }
     // map
     List<Integer> years = mr2.callMap(alist);
     // reduce
     Integer median_year = mr2.callReduce(years);
     System.out.println("Median year is: " + median_year);
+    
+    try{Thread.sleep(500);} catch (Exception ex){}
     
     // map reduce 3
     MapReduce<MusicObject, Integer, List<MusicObject>, MusicObject> mr3 = new MapReduce<MusicObject, Integer, List<MusicObject>, MusicObject>();
@@ -131,21 +156,41 @@ public class Client {
     filter = new HashMap<String, String>();
     filter.put("ARTIST", "Gnarls Barkley");
     filter.put("ALBUM", "St. Elsewhere");
-    alist = c.query("ALL", filter);
+    alist = null;
+    while(alist == null) {
+      try{
+        alist = c.query("ALL", filter);
+      } catch (Exception ex) {
+        alist = null;
+        continue;
+      }
+    }
     // reduce
     MusicObject longest = mr3.callReduce(alist);
     System.out.println("Longest track is: " + longest);
     
+    try{Thread.sleep(500);} catch (Exception ex){}
+    
     // kill
     System.out.println("\n\nKilling a server...");
     c.kill();
+    
+    try{Thread.sleep(500);} catch (Exception ex){}
     
     // map reduce 3 again
     System.out.println("\n\nMap/Reduce #3 (after kill): Longest track on St. Elsewhere by Gnarls Barkley");
     filter = new HashMap<String, String>();
     filter.put("ARTIST", "Gnarls Barkley");
     filter.put("ALBUM", "St. Elsewhere");
-    alist = c.query("ALL", filter);
+    alist = null;
+    while(alist == null) {
+      try{
+        alist = c.query("ALL", filter);
+      } catch (Exception ex) {
+        alist = null;
+        continue;
+      }
+    }
     // reduce
     longest = mr3.callReduce(alist);
     System.out.println("Longest track is: " + longest);
@@ -158,7 +203,9 @@ public class Client {
     while(req == null) {
       try {
         InetSocketAddress sa = servers.get((int)Math.floor(Math.random() * servers.size()));
-        req = new Socket(sa.getAddress(), sa.getPort());
+        System.out.println("Trying address " + sa);
+        req = new Socket();
+        req.connect(sa, CONNECTION_TIMEOUT);
       } catch (Exception ex) {
         req = null;
       }
@@ -167,9 +214,13 @@ public class Client {
     //PrintWriter pwo = null;
     DataOutputStream dos = null;
     try {
+      System.out.println("Grabbing ois");
       ois = new ObjectInputStream(req.getInputStream());
-      //pwo = new PrintWriter(req.getOutputStream());
+      System.out.println("Grabbing dos");
       dos = new DataOutputStream(req.getOutputStream());
+      //pwo = new PrintWriter(req.getOutputStream());
+    } catch (EOFException ex) {
+      return null;
     } catch (Exception ex) {
       ex.printStackTrace();
     }
@@ -198,6 +249,8 @@ public class Client {
       for(Object o : ret2) {
         retval.add((MusicObject)o);
       }
+    } catch (EOFException ex) {
+      return null;
     } catch (Exception ex) {
       ex.printStackTrace();
     }
@@ -213,7 +266,8 @@ public class Client {
     while(req == null) {
       try {
         InetSocketAddress sa = servers.get((int)Math.floor(Math.random() * servers.size()));
-        req = new Socket(sa.getAddress(), sa.getPort());
+        req = new Socket();
+        req.connect(sa, CONNECTION_TIMEOUT);
       } catch (Exception ex) {
         req = null;
       }
@@ -256,7 +310,9 @@ public class Client {
     while(req == null) {
       try {
         InetSocketAddress sa = servers.get((int)Math.floor(Math.random() * servers.size()));
-        req = new Socket(sa.getAddress(), sa.getPort());
+        req = new Socket();
+        req.connect(sa, CONNECTION_TIMEOUT);
+        System.out.println("Killing node: " + sa);
       } catch (Exception ex) {
         req = null;
       }

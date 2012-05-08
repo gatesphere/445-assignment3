@@ -203,6 +203,8 @@ class ClientRequest extends Thread {
   
   public void run() {
     try {
+      System.out.println("[.] Grabbing DataInputStream");
+      ObjectOutputStream ois = new ObjectOutputStream(this.socket.getOutputStream());
       DataInputStream dis = new DataInputStream(this.socket.getInputStream());
       String request = dis.readUTF();
       System.out.println(request);
@@ -218,6 +220,7 @@ class ClientRequest extends Thread {
           System.err.format("[!] Connection failed: %s\n", addr.toString());  
           continue;
         }
+        System.out.println("[.] Grabbing DataOutputStream for " + addr);
         DataOutputStream dos = new DataOutputStream(s.getOutputStream());
         // @TODO Determine correct action based on request
         dos.writeUTF(request);
