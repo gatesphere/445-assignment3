@@ -6,11 +6,10 @@
 import java.io.*;
 import java.net.*;
 import java.nio.*;
-import java.nio.channels.*;
 import java.util.Scanner;
 import java.util.List;
-import java.util.Iterator;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 public class NodeServer extends Thread {
 
@@ -74,7 +73,10 @@ public class NodeServer extends Thread {
 		while (true) {
 			Socket connection = null;
 			try { connection = this.socket.accept(); } 
-			catch (IOException e) { e.printStackTrace(); }
+			catch (IOException e) { 
+        e.printStackTrace();
+        return; //needs to be here to avoid exceptions in the following lines
+      }
 			
 			// Determine origin
 			InetSocketAddress con_addr = new InetSocketAddress(connection.getInetAddress(), connection.getPort());
@@ -108,14 +110,75 @@ public class NodeServer extends Thread {
 	 * @return The list of all appropriate MusicOjects.
 	 */
 	private List<MusicObject> queryAll(String query) {
-		List<MusicObject> results = new ArrayList<MusicObject>();//this.node.query(query);
-		for (InetSocketAddress sock : this.servers) {
-			// @TODO Send GET to all other nodes, receive List<MusicObject> through OOS
+		List<List<MusicObject>> listFromNodes = new ArrayList<List<MusicObject>>();//this.node.query(query); -->uhh...lolwut??
+    int numberOfNodes = this.servers.size();
+		for (InetSocketAddress addr : this.servers) {
+			// make the connection, send the query, receive the List<MusicObject>
+      try{
+        Socket sock = new Socket(addr.getAddress(), addr.getPort(), InetAddress
+                .getLocalHost(), NodeServer.DEFAULT_PORT);
+        ObjectOutputStream oos = new ObjectOutputStream(sock.getOutputStream());
+        ObjectInputStream ois = new ObjectInputStream(sock.getInputStream());
+        oos.writeObject(query);
+        Object readObject = ois.readObject();
+        if(!(readObject instanceof List)){
+          continue;
+        }
+        listFromNodes.add((List<MusicObject>)readObject);
+      } catch (IOException | ClassNotFoundException e){
+        e.printStackTrace();
+      }
 		}
-		// @TODO Perform consensus
-	
-		// @TODO Limit and return results
-		return results;
+    
+    /*
+     * lemme break it down playa...(since this is a convoluted way to do this...
+     * by all means if anyone can think of a better way to do this then let me
+     * know...I write spaghetti code consistently the first time I write anything)
+     */
+    //list to store all data as the nodes agree on it
+    java.util.HashMap <Integer, List<MusicObject>> map = new java.util.HashMap<>();
+    //continue to iterate until the list is less than n/2 + 1, since any element
+    //past that number cannot recieve concensus, by definition of concensus
+    while(listFromNodes.size() > (numberOfNodes / 2 + 1)){
+      //pop off the first element
+      List <MusicObject> current = listFromNodes.remove(0);
+      //variable to maintain how many nodes agree on this value
+      int concensusCount = 1;
+      //iterate through all remaining lists from all the other nodes
+      for (int i = 0; i < listFromNodes.size(); i++) {
+        //the list we will be comparing to 
+        List <MusicObject> comparingList = listFromNodes.get(i);
+        //if the sizes are different then they are inherently different lists-->go to next list
+        if(comparingList.size() != current.size()){continue;}
+        //varible for after the for loop is finished to increment the concensus count
+        boolean listsAreEqual = true;
+        //go element by element and make sure the lists contain exactly the same elements,
+        //in exactly the same order
+        for (int j = 0; j < comparingList.size(); j++) {
+          if(comparingList.get(j).compareTo(current.get(i)) != 0){
+            listsAreEqual = false;
+            break;
+          }
+        }
+        
+        if(listsAreEqual){
+          concensusCount++;
+        }
+      }
+      //put it in the map...if a key already exists with the same concensus, then it really
+      //doesn't matter, because both would be valid return lists in the end
+      map.put(concensusCount, current);
+    }
+    //this is where it gets stupid...sort the keys, and pull out the one with
+    //the highest concensus value
+    Integer[] keyArray = (Integer [])map.keySet().toArray();
+    Arrays.sort(keyArray);
+    List<MusicObject> result = map.get(keyArray[keyArray.length - 1]);
+    //if it isn't n/2 + 1 concnensus, then return nothing...fail
+    if(result.size() < (numberOfNodes / 2 + 1))
+      return null;
+    else
+      return result;
 	}
 
 	/**
