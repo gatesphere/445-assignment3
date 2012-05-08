@@ -3,7 +3,6 @@
 
 import java.io.*;
 import java.util.*;
-import java.util.concurrent.*;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 import org.xml.sax.*;
@@ -17,7 +16,7 @@ enum Mode {
   MODE_TITLE, MODE_YEAR, MODE_GENRE, MODE_TRACK_LENGTH, MODE_SONG
 }
 
-public class MusicObject implements Serializable {
+public class MusicObject implements Serializable, Comparable {
   
   private String id;
   private String artist;
@@ -215,5 +214,74 @@ public class MusicObject implements Serializable {
       if(!match) break;
     }
     return match;
+  }
+  
+  /**
+   * This method compares two MusicObjects. The method only compares the
+   * equality of the following fields:<br />
+   *    &nbsp;&nbsp;&nbsp;&nbsp;String id;<br />
+   *    &nbsp;&nbsp;&nbsp;&nbsp;String artist;<br />
+   *    &nbsp;&nbsp;&nbsp;&nbsp;String album_artist;<br />
+   *    &nbsp;&nbsp;&nbsp;&nbsp;String album;<br />
+   *    &nbsp;&nbsp;&nbsp;&nbsp;int track;<br />
+   *    &nbsp;&nbsp;&nbsp;&nbsp;String title;<br />
+   *    &nbsp;&nbsp;&nbsp;&nbsp;int year;<br />
+   *    &nbsp;&nbsp;&nbsp;&nbsp;String genre;<br />
+   *    &nbsp;&nbsp;&nbsp;&nbsp;int track_length;<br />
+   * Upon comparing the values in the specified fields, this method returns
+   * an integer based value, signaling what fields are equal and what fields
+   * are not. The returned value should be considered a binary value, and the
+   * bits set tell which fields are not equal. For example:<br />
+   * <br />
+   * 19 = 0x13: signals that the fields, id, artist, and track are not equal
+   * 0 = 0x0: signals all fields are equal
+   * -1 = 0xFFFFFFFF: signals that the object provided is not a MusicObject
+   * @param o the object that will be compared to this
+   * @return 0 if objects are equal, -1 if o is not a MusicObject, or the
+   *    following binary values or'd together otherwise:
+   *      0x1: id is not equal
+   *      0x2: artist is not equal
+   *      0x4: album_artist is not equal
+   *      0x8: album is not equal
+   *      0x10: track is not equal
+   *      0x20: title is not equal
+   *      0x40: year is not equal
+   *      0x80: genre is not equal
+   *      0x100: track_length is not equal
+   */
+  public int compareTo(Object o){
+    if(o instanceof MusicObject){
+      return -1;
+    }
+    int returnValue = 0;
+    MusicObject m = (MusicObject)o;
+    if(!m.id.equals(id)){
+      returnValue |= 0x1;
+    }
+    if(!m.artist.equals(artist)){
+      returnValue |= 0x2;
+    }
+    if(!m.album_artist.equals(album_artist)){
+      returnValue |= 0x4;
+    }
+    if(!m.album.equals(album)){
+      returnValue |= 0x8;
+    }
+    if(m.track != track){
+      returnValue |= 0x10;
+    }
+    if(!m.title.equals(title)){
+      returnValue |= 0x20;
+    }
+    if(m.year != year){
+      returnValue |= 0x40;
+    }
+    if(!m.genre.equals(genre)){
+      returnValue |= 0x80;
+    }
+    if(m.track_length != track_length){
+      returnValue |= 0x100;
+    }
+    return returnValue;
   }
 }
