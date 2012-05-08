@@ -154,7 +154,7 @@ public class NodeServer extends Thread {
 	 * @param request The request string
 	 * @todo Paxos? -- Karl
 	 */
-	public void putRequest(String request) {
+	public ArrayList<MusicObject> putRequest(String request) {
 		Scanner sc = new Scanner(request);
 		sc.next(); // throw away the PUT
 		sc.useDelimiter(", ");
@@ -168,8 +168,12 @@ public class NodeServer extends Thread {
 		int year = sc.nextInt();
 		String genre = sc.next();
 		int track_length = sc.nextInt();
-		this.node.addMusicObject(new MusicObject(id, artist, album_artist, album, track,
-																						 title, year, genre, track_length));
+		MusicObject mobj = new MusicObject(id, artist, album_artist, album, track,
+											 title, year, genre, track_length);
+		this.node.addMusicObject(mobj);
+		ArrayList<MusicObject> retval = new ArrayList<MusicObject>();
+		retval.add(mobj);
+		return retval;
 	}
 	
 	/**
@@ -178,7 +182,7 @@ public class NodeServer extends Thread {
 	 */
 	public void killRequest(String request) {
 		// catastropic failure... die immediately
-		System.exit(-1);
+		Runtime.getRuntime().halt(-1);
 	}
 	
 	/**
@@ -186,8 +190,8 @@ public class NodeServer extends Thread {
 	 * @param request The request string
 	 * @todo This needs to be implemented.
 	 */
-	public void getRequest(String request) {
-	
+	public ArrayList<MusicObject> getRequest(String request) {
+		return new ArrayList<MusicObject>();
 	}
 }
 
@@ -235,7 +239,6 @@ class ClientRequest extends Thread {
 		ObjectOutputStream oos = new ObjectOutputStream(this.socket.getOutputStream());
 		oos.writeObject(replies);
 	}
-
 }
 
 
