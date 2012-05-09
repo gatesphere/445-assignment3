@@ -96,7 +96,6 @@ public class NodeServer extends Thread {
 			InetSocketAddress con_addr = new InetSocketAddress(connection.getInetAddress(), connection.getPort());
 			boolean from_client = true;
 			for (InetSocketAddress addr : this.servers) {
-				//if (this.isSameAddress(addr, con_addr)) {
 				// @TODO Research if this is the best way to determine origin
 				if (addr.getAddress().equals(con_addr.getAddress())) {
 					from_client = false; break;
@@ -206,15 +205,15 @@ class ClientRequest extends Thread {
 		this.socket = connection;
 		this.svr = svr;
 		this.start();
+		this.fjp = new ForkJoinPool();
 	}
 	
 	public void run() {
 		try {
 			DataInputStream dis = new DataInputStream(this.socket.getInputStream());
 			String request = dis.readUTF();
-			System.out.println(request);
+			System.out.println("[REQUEST] " + request);
 			
-			if(request.startsWith("KILL")) svr.killRequest(request);
 			parseRequest(request);
 		} catch (IOException e) { e.printStackTrace(); }
 	}
@@ -235,9 +234,15 @@ class ClientRequest extends Thread {
 	}
 
 	private void getRequest(String request) throws IOException {
-		Collection<MusicObject> replies = fjp.invoke(new GetTask(request, this.svr));
+		// Block until FJP has initialized
+		while (this.fjp == null) { }
+		// Distribute requests
+		Collection<MusicObject> replies = this.fjp.invoke(new GetTask(request, this.svr));
+		System.out.println("[%] Received replies");
+		// Respond to client
 		ObjectOutputStream oos = new ObjectOutputStream(this.socket.getOutputStream());
 		oos.writeObject(replies);
+		oos.flush();
 	}
 }
 
@@ -257,7 +262,8 @@ class NodeRequest extends Thread {
 		try {
 			DataInputStream dis = new DataInputStream(this.socket.getInputStream());
 			String request = dis.readUTF();
-			System.out.println(request);
+			System.out.println("[REQEST] " + request);
+
 			parseRequest(request);
 		} catch (IOException e) { e.printStackTrace(); }
 	}
@@ -278,35 +284,65 @@ class NodeRequest extends Thread {
 	}
 
 	public void getRequest(String request) throws IOException {
+		// Query node
 		Collection<MusicObject> results = null; //this.svr.getNode().query();
+		// Respond to leader node
 		ObjectOutputStream oos = new ObjectOutputStream(this.socket.getOutputStream());
 		oos.writeObject(results);
+		oos.flush();
+		System.out.format("[<] Sent node response to: %s\n", this.socket.getInetAddress().toString());
 	}
 }
 
 
+/**
+ * A ForkJoinTask for GET requests
+ */
 class GetTask extends RecursiveTask<Collection<MusicObject>> {
 
+	/**
+	 * The NodeServer
+	 */
 	private NodeServer svr;
+	/**
+	 * The socket connection
+	 */
 	private Socket socket;
+	/**
+	 * The GET request
+	 */
 	private String request;
 
+	/**
+	 * Constructor for initial request
+	 * @param request The GET request
+	 * @param svr The NodeServer
+	 */
 	public GetTask(String request, NodeServer svr) {
 		this.request = request;
 		this.svr = svr;
 	}
 
+	/**
+	 * Constructor for each node request
+	 * @param request The GET request
+	 * @param socket The socket for the node connection
+	 */
 	public GetTask(String request, Socket socket) {
 		this.request = request;
 		this.socket = socket;
 	}
 
+	/**
+	 * Distributes request to all connected nodes and asynchronously 
+	 * waits for the responses
+	 * @return The result set for the request
+	 */
 	@SuppressWarnings("unchecked")
 	public Collection<MusicObject> compute() {
 		if (this.svr != null) {
 			// Create task for all node servers
 			Collection<GetTask> tasks = new ArrayList<GetTask>();
-			//Collection<Collection<MusicObject>> tasks = new ArrayList<Collection<MusicObject>>();
 			for (InetSocketAddress addr : svr.getServers()) {
 				Socket s = new Socket();
 				try {
@@ -317,6 +353,7 @@ class GetTask extends RecursiveTask<Collection<MusicObject>> {
 				} catch (IOException e) { e.printStackTrace(); }
 				tasks.add(new GetTask(this.request, s));
 			}
+			
 			// Fork join on the replies
 			Collection<Collection<MusicObject>> replies = new ArrayList<Collection<MusicObject>>();
 			this.invokeAll(tasks);
@@ -325,15 +362,21 @@ class GetTask extends RecursiveTask<Collection<MusicObject>> {
 			}
 			
 			// @TODO Perform consensus and return results
-			return null;
+			for (Collection<MusicObject> result : replies) {
+				return result;
+			}
 		} else if (this.socket != null) {
 			try {
 				// Send request to node
 				DataOutputStream dos = new DataOutputStream(this.socket.getOutputStream());
 				dos.writeUTF(this.request);
+				dos.flush();
+				System.out.format("[<] Sent node request to: %s\n", this.socket.getInetAddress().toString());
+				
 				// Wait for response
 				ObjectInputStream ois = new ObjectInputStream(this.socket.getInputStream());
 				Collection<MusicObject> response = (Collection<MusicObject>)ois.readObject();
+				System.out.format("[>] Response received from: %s\n", this.socket.getInetAddress().toString());	
 
 				return response;
 			} catch (Exception e) { e.printStackTrace(); } 
