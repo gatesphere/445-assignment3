@@ -2,6 +2,9 @@
  * CSC 445
  * Project 3
  */
+ 
+// Joe Mirizio
+// Jacob Peck
 
 import java.io.ObjectInputStream;
 import java.io.FileInputStream;

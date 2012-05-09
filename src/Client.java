@@ -1,5 +1,7 @@
 // Client class
-// 20120429
+
+// Jacob Peck
+// Joe Mirizio
 
 import java.util.*;
 import java.io.*;

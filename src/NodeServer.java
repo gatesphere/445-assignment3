@@ -3,6 +3,10 @@
  * Project 3
  */
 
+// Joe Mirizio
+// Jacob Peck
+// Nate Hemmes (1 method)
+
 import java.io.*;
 import java.net.*;
 import java.nio.*;

@@ -1,5 +1,7 @@
 // MusicObject class
-// 20120418
+
+// Jacob Peck
+// Karl Miller (1 method)
 
 import java.io.*;
 import java.util.*;
