@@ -53,9 +53,9 @@ public class Client {
     
     // send out requests
     // store
-    System.out.println("Adding a new MusicObject");
-    MusicObject mobj = new MusicObject(UUID.randomUUID().toString(), "Some Artist", "Some Album Artist",
-                                       "Some Album", 3, "Some Title", 2012, "Some Genre", 323);
+    //System.out.println("Adding a new MusicObject");
+    //MusicObject mobj = new MusicObject(UUID.randomUUID().toString(), "Some Artist", "Some Album Artist",
+    //                                   "Some Album", 3, "Some Title", 2012, "Some Genre", 323);
     //c.store(mobj);
     
     try{Thread.sleep(500);} catch (Exception ex){}
@@ -99,6 +99,7 @@ public class Client {
     // reduce
     Integer avg_length = mr1.callReduce(track_lengths);
     System.out.println("Average length is: " + avg_length);
+    System.out.println("alist: " + alist.size() + " entries.");
     
     try{Thread.sleep(500);} catch (Exception ex){}
     
@@ -111,7 +112,7 @@ public class Client {
       public Integer operate(List<Integer> list) {
         HashMap<Integer, Integer> accum = new HashMap<Integer, Integer>();
         for(Integer i : list) {
-          if(accum.get(i) == 0) accum.put(i, 1);
+          if(accum.get(i) == null) accum.put(i, 1);
           else accum.put(i, accum.get(i) + 1);
         }
         Integer median = 0;
@@ -139,6 +140,7 @@ public class Client {
     // reduce
     Integer median_year = mr2.callReduce(years);
     System.out.println("Median year is: " + median_year);
+    System.out.println("alist: " + alist.size() + " entries.");
     
     try{Thread.sleep(500);} catch (Exception ex){}
     
@@ -171,6 +173,7 @@ public class Client {
     // reduce
     MusicObject longest = mr3.callReduce(alist);
     System.out.println("Longest track is: " + longest);
+    System.out.println("alist: " + alist.size() + " entries.");
     
     try{Thread.sleep(500);} catch (Exception ex){}
     
@@ -197,6 +200,7 @@ public class Client {
     // reduce
     longest = mr3.callReduce(alist);
     System.out.println("Longest track is: " + longest);
+    System.out.println("alist: " + alist.size() + " entries.");
   }
   
   

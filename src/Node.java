@@ -93,6 +93,98 @@ public class Node implements Serializable {
     return resultset;
   }
   
+  protected HashMap<String, String> parseRequest(String request) {
+    HashMap<String, String> filter = new HashMap<String, String>();
+
+    boolean looking = false;
+    boolean master = false;
+    boolean seekAll = false;
+
+    int begin = 0;
+    int filled = 0;
+    int saughtSize = 0;//this is how many responsed are desired
+
+    String[] parsedRequest = new String[10];
+    String singleQ = "\'";
+
+    for (int c = 0; c < request.length(); c++) {
+      char ch = request.charAt(c);
+      if (ch == ',') {
+        if (begin < (c - 1)) {
+          parsedRequest[filled] = request.substring(begin, c);
+          begin = c + 1;
+          filled = filled + 1;
+        }
+        while (c < (request.length() - 1) && request.charAt(c + 1) == ' ') {
+          c = c + 1;
+          begin = c + 1;
+        }
+        if (c >= (request.length() - 1)) {
+          break;
+        }
+      } else if (ch == '\'') {
+        c = c + 1;
+        while (c < (request.length()) && request.charAt(c) != '\'') {
+          c = c + 1;
+        }
+        if (c == (request.length() - 1)) {
+          parsedRequest[filled] = request.substring(begin, c + 1);
+          filled = filled + 1;
+        }
+      } else if (ch == ' ') {
+        if (begin < (c)) {
+          parsedRequest[filled] = request.substring(begin, c);
+          begin = c + 1;
+          filled = filled + 1;
+        }
+      }
+    } //done building the array of commands
+
+    if (parsedRequest[0].compareToIgnoreCase("get") == 0) {
+      if (parsedRequest[1].compareToIgnoreCase("all") == 0) {
+        master = true;
+        seekAll = true;
+      } else if (parsedRequest[1].compareTo("n") == 0) {
+        master = false;
+        seekAll = true;
+      } else {
+        try {
+          int x = Integer.parseInt(parsedRequest[1]);
+          saughtSize = x;
+        } catch (NumberFormatException nfe) {
+          System.out.println("Number Format Exception: " + nfe.getMessage());
+        }
+      }
+
+      String[] getFields = null;
+
+      for (int pointer = 2; pointer < filled; pointer++) {//identifies the fields and gets the objects with those clasifications
+        System.out.println("parsedRequest at " + pointer + " is " + parsedRequest[pointer]);
+        getFields = parsedRequest[pointer].split("=");
+        if (getFields[0].compareToIgnoreCase("artist") == 0) {
+          filter.put("ARTIST", getFields[1].substring(1, getFields[1].length()-1));
+        } else if ((getFields[0].compareToIgnoreCase("albumartist") == 0) || (getFields[0].compareToIgnoreCase("album_artist") == 0)) {
+          filter.put("ALBUM_ARTIST", getFields[1].substring(1, getFields[1].length()-1));
+        } else if (getFields[0].compareToIgnoreCase("album") == 0) {
+          filter.put("ALBUM", getFields[1].substring(1, getFields[1].length()-1));
+        } else if (getFields[0].compareToIgnoreCase("track") == 0) {
+          filter.put("TRACK", getFields[1].substring(1, getFields[1].length()-1));
+        } else if (getFields[0].compareToIgnoreCase("title") == 0) {
+          filter.put("TITLE", getFields[1].substring(1, getFields[1].length()-1));
+        } else if (getFields[0].compareToIgnoreCase("year") == 0) {
+          filter.put("YEAR", getFields[1].substring(1, getFields[1].length()-1));
+        } else if (getFields[0].compareToIgnoreCase("genre") == 0) {
+          filter.put("GENRE", getFields[1].substring(1, getFields[1].length()-1));
+        } else if ((getFields[0].compareToIgnoreCase("tracklength") == 0) || (getFields[0].compareToIgnoreCase("track_length") == 0)) {
+          filter.put("TRACK_LENGTH", getFields[1].substring(1, getFields[1].length()-1));
+        } else {
+          //Improper field label;
+        }
+      }
+    }
+    return filter;
+  }
+  
   /**
    * main - initialize node and save to file
    */
@@ -112,7 +204,11 @@ public class Node implements Serializable {
         File f = files[i];
         String id = f.getName().substring(0, f.getName().lastIndexOf('.'));
         //System.out.println("Adding MusicObject: " + id);
-        this.addMusicObject(MusicObject.buildFromFile(f, id));
+        MusicObject mobj = MusicObject.buildFromFile(f, id);
+        if(mobj.validate()){
+          this.addMusicObject(mobj);
+          System.out.println(mobj);
+        }
       } catch (Exception ex) {continue;}
     }
   }

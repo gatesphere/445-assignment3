@@ -3,13 +3,6 @@
 
 import java.io.*;
 import java.util.*;
-import javax.xml.parsers.SAXParser;
-import javax.xml.parsers.SAXParserFactory;
-import org.xml.sax.*;
-import org.xml.sax.Attributes;
-import org.xml.sax.SAXException;
-import org.xml.sax.SAXParseException;
-import org.xml.sax.helpers.DefaultHandler;
 
 enum Mode {
   MODE_NONE, MODE_ARTIST, MODE_ALBUM_ARTIST, MODE_ALBUM, MODE_TRACK,
@@ -50,87 +43,6 @@ public class MusicObject implements Serializable, Comparable {
   public void setTrackLength(int track_length) {this.track_length = track_length;}
   
   public static MusicObject mobj;
-  public static final SAXParserFactory factory = SAXParserFactory.newInstance();
-  public static SAXParser saxParser;
-  public static final DefaultHandler handler = new DefaultHandler() {
-    Mode mode = Mode.MODE_NONE;
-    
-    public void startElement(String uri, String localName,String qName, 
-            Attributes attributes) throws SAXException {
-      //System.out.println("Start Element :" + qName);
-      if (localName.equalsIgnoreCase("SONG")) {mode = Mode.MODE_SONG;}
-      if (localName.equalsIgnoreCase("ARTIST")) {mode = Mode.MODE_ARTIST;}
-      if (localName.equalsIgnoreCase("ALBUM_ARTIST")) {mode = Mode.MODE_ALBUM_ARTIST;}
-      if (localName.equalsIgnoreCase("ALBUM")) {mode = Mode.MODE_ALBUM;}
-      if (localName.equalsIgnoreCase("TRACK")) {mode = Mode.MODE_TRACK;}
-      if (localName.equalsIgnoreCase("TITLE")) {mode = Mode.MODE_TITLE;}
-      if (localName.equalsIgnoreCase("YEAR")) {mode = Mode.MODE_YEAR;}
-      if (localName.equalsIgnoreCase("GENRE")) {mode = Mode.MODE_GENRE;}
-      if (localName.equalsIgnoreCase("TRACK_LENGTH")) {mode = Mode.MODE_TRACK_LENGTH;}
-    }
-   
-    public void endElement(String uri, String localName,
-      String qName) throws SAXException {
-      //System.out.println("End Element :" + qName);
-    }
-   
-    public void characters(char ch[], int start, int length) throws SAXException {
-      String s = new String(Arrays.copyOfRange(ch, start, start+length));
-      int x = 0;
-      //System.out.println("mode: " + mode + " s: " + s);
-      // read info
-      switch(mode) {
-        case MODE_ARTIST:
-          MusicObject.mobj.setArtist(s);
-          break;
-        case MODE_ALBUM_ARTIST:
-          MusicObject.mobj.setAlbumArtist(s);
-          break;
-        case MODE_ALBUM:
-          MusicObject.mobj.setAlbum(s);
-          break;
-        case MODE_TRACK:
-          x = 0; // default
-          try { x = Integer.parseInt(s); }
-          catch(Exception ex) {}
-          MusicObject.mobj.setTrack(x);
-          break;
-        case MODE_TITLE:
-          MusicObject.mobj.setTitle(s);
-          break;
-        case MODE_YEAR:
-          x = 0; // default
-          try { x = Integer.parseInt(s); }
-          catch(Exception ex) {}
-          MusicObject.mobj.setYear(x);
-          break;
-        case MODE_GENRE:
-          MusicObject.mobj.setGenre(s);
-          break;
-        case MODE_TRACK_LENGTH:
-          x = 0; // default
-          try { x = Integer.parseInt(s); }
-          catch(Exception ex) {}
-          MusicObject.mobj.setTrackLength(x);
-          break;
-        default:
-          break; // unnecessary, but for symmetry
-      }
-      mode = Mode.MODE_NONE;
-    }
-    
-    public void error(SAXParseException ex) {} 
-    public void fatalError(SAXParseException ex) {}        
-    public void warning(SAXParseException ex) {}
-  };
-    
-  
-  static {
-    try {
-      factory.setFeature("http://apache.org/xml/features/continue-after-fatal-error", true);
-      saxParser = factory.newSAXParser();
-    } catch (Exception ex) {}
-  }
   
   private MusicObject(){}                        
   
@@ -164,49 +76,129 @@ public class MusicObject implements Serializable, Comparable {
   
   public static MusicObject buildFromFile(File f, String id) {
     MusicObject.mobj = new MusicObject();
-    try {      
-      //InputSource fis = new InputSource(new FileInputStream(f));
-      InputSource fis = new InputSource();
-      Reader cr = new InputStreamReader(new FileInputStream(f));
-      fis.setCharacterStream(cr);
-      //fis.setEncoding("US-ASCII");
-      saxParser.parse(fis, handler);
-    } catch (Throwable e) {
-      //System.out.println(f.getName());
-      //e.printStackTrace();
+    Scanner sc = null;
+    try {
+      sc = new Scanner(f);
+      while(sc.hasNextLine()) {
+        String line = sc.nextLine().trim();
+        if(line.equals("<?xml ?>")) continue;
+        if(line.equals("<song>")) continue;
+        if(line.equals("</song>")) continue;
+        if(line.startsWith("<artist>")) {
+          line = line.replaceFirst("<artist>", "");
+          line = line.replaceFirst("</artist>", "");
+          mobj.setArtist(line);
+          continue;
+        }
+        if(line.startsWith("<album_artist>")) {
+          line = line.replaceFirst("<album_artist>", "");
+          line = line.replaceFirst("</album_artist>", "");
+          mobj.setAlbumArtist(line);
+          continue;
+        }
+        if(line.startsWith("<album>")) {
+          line = line.replaceFirst("<album>", "");
+          line = line.replaceFirst("</album>", "");
+          mobj.setAlbum(line);
+          continue;
+        }
+        if(line.startsWith("<track>")) {
+          line = line.replaceFirst("<track>", "");
+          line = line.replaceFirst("</track>", "");
+          mobj.setTrack(Integer.parseInt(line));
+          continue;
+        }
+        if(line.startsWith("<title>")) {
+          line = line.replaceFirst("<title>", "");
+          line = line.replaceFirst("</title>", "");
+          mobj.setTitle(line);
+          continue;
+        }
+        if(line.startsWith("<year>")) {
+          line = line.replaceFirst("<year>", "");
+          line = line.replaceFirst("</year>", "");
+          mobj.setYear(Integer.parseInt(line));
+          continue;
+        }
+        if(line.startsWith("<genre>")) {
+          line = line.replaceFirst("<genre>", "");
+          line = line.replaceFirst("</genre>", "");
+          mobj.setGenre(line);
+          continue;
+        }
+        if(line.startsWith("<track_length>")) {
+          line = line.replaceFirst("<track_length>", "");
+          line = line.replaceFirst("</track_length>", "");
+          mobj.setTrackLength(Integer.parseInt(line));
+          continue;
+        }
+      }
+    } catch (Exception ex) {
+      return MusicObject.mobj;
     }
-    
+    sc.close();
     MusicObject.mobj.setId(id);
     return MusicObject.mobj;
   }
   
+  public boolean validate() {
+    //System.out.println(this);
+    if(this.id == null) return false;
+    if(this.artist == null) return false;
+    if(this.album_artist == null) return false;
+    if(this.album == null) return false;
+    if(this.track == 0) return false;
+    if(this.title == null) return false;
+    if(this.year == 0) return false;
+    if(this.genre == null) return false;
+    if(this.track_length == 0) return false;
+    return true;
+  }
+    
   public boolean matches(HashMap<String, String> filter) {
     boolean match = true;
     for(Map.Entry<String, String> e : filter.entrySet()) {
+      //System.out.println(this.toString());
       switch(e.getKey()) {
         case "ARTIST":
-          match = (this.artist.equals(e.getValue()));
+          if(this.artist != null) {
+            //System.out.println(e.getValue() + " ? " + this.artist);
+            match = (this.artist.equals(e.getValue()));
+          } else
+            match = false;
           break;
         case "ALBUM_ARTIST":
-          match = (this.album_artist.equals(e.getValue()));
+          if(this.album_artist != null)
+            match = (this.album_artist.equals(e.getValue()));
+          else
+            match = false;
           break;
         case "ALBUM":
-          match = (this.album.equals(e.getValue()));
+          if(this.artist != null)
+            match = (this.album.equals(e.getValue()));
+          else
+            match = false;
           break;
         case "TRACK":
-          match = (this.album.toString().equals(e.getValue()));
+          match = (Integer.toString(this.track).equals(e.getValue()));
           break;
         case "TITLE":
-          match = (this.album.equals(e.getValue()));
+          if(this.title != null)
+            match = (this.title.equals(e.getValue()));
+          else
+            match = false;
           break;
         case "YEAR":
-          match = (this.album.toString().equals(e.getValue()));
+          match = (Integer.toString(this.year).equals(e.getValue()));
           break;
         case "GENRE":
-          match = (this.album.equals(e.getValue()));
+          if(this.genre != null)
+            match = (this.genre.equals(e.getValue()));
+          else
+            match = false;
           break;
         case "TRACK_LENGTH":
-          match = (this.album.toString().equals(e.getValue()));
+          match = (Integer.toString(this.track_length).equals(e.getValue()));
           break;
         default:
           break;
@@ -250,7 +242,7 @@ public class MusicObject implements Serializable, Comparable {
    *      0x100: track_length is not equal
    */
   public int compareTo(Object o){
-    if(o instanceof MusicObject){
+    if(!(o instanceof MusicObject)){
       return -1;
     }
     int returnValue = 0;
@@ -283,5 +275,9 @@ public class MusicObject implements Serializable, Comparable {
       returnValue |= 0x100;
     }
     return returnValue;
+  }
+  
+  public boolean equals(Object o) {
+    return this.compareTo(o) == 0;
   }
 }
