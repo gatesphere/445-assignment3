@@ -58,7 +58,7 @@ public class Client {
                                        "Some Album", 3, "Some Title", 2012, "Some Genre", 323);
     //c.store(mobj);
     
-    //try{Thread.sleep(500);} catch (Exception ex){}
+    try{Thread.sleep(500);} catch (Exception ex){}
     
     // kill
     /*
@@ -66,7 +66,7 @@ public class Client {
     c.kill();
     */
     
-    //try{Thread.sleep(500);} catch (Exception ex){}
+    try{Thread.sleep(500);} catch (Exception ex){}
     
     // map reduce 1
     MapReduce<MusicObject, Integer, List<Integer>, Integer> mr1 = new MapReduce<MusicObject, Integer, List<Integer>, Integer>();
@@ -100,7 +100,7 @@ public class Client {
     Integer avg_length = mr1.callReduce(track_lengths);
     System.out.println("Average length is: " + avg_length);
     
-    /*try{Thread.sleep(500);} catch (Exception ex){}
+    try{Thread.sleep(500);} catch (Exception ex){}
     
     // map reduce 2
     MapReduce<MusicObject, Integer, List<Integer>, Integer> mr2 = new MapReduce<MusicObject, Integer, List<Integer>, Integer>();
@@ -196,7 +196,7 @@ public class Client {
     }
     // reduce
     longest = mr3.callReduce(alist);
-    System.out.println("Longest track is: " + longest);*/
+    System.out.println("Longest track is: " + longest);
   }
   
   
@@ -213,20 +213,18 @@ public class Client {
         req = null;
       }
     }
-    DataOutputStream dos = null;
     ObjectInputStream ois = null;
     //PrintWriter pwo = null;
+    DataOutputStream dos = null;
     try {
       System.out.println("Grabbing dos");
       dos = new DataOutputStream(req.getOutputStream());
       //pwo = new PrintWriter(req.getOutputStream());
     } catch (EOFException ex) {
-		ex.printStackTrace();
       return null;
     } catch (Exception ex) {
       ex.printStackTrace();
     }
-	System.out.println("Done getting streams");
     
     // construct query
     StringBuilder sb = new StringBuilder("GET ");

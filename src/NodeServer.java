@@ -34,6 +34,7 @@ public class NodeServer extends Thread {
 
 	private InetSocketAddress local_address;
 
+	private ForkJoinPool fjp;
 
 	/**
 	 * Constructor specifying the port and the initial server list.
@@ -70,6 +71,8 @@ public class NodeServer extends Thread {
 			}
 		}
 		System.out.println("---------------------------------------------------");
+		
+		this.fjp = new ForkJoinPool();
 
 		/* Initialize node */
 		this.node = new Node();
@@ -102,12 +105,7 @@ public class NodeServer extends Thread {
 				}
 			}
 
-			// Process request
-			if (from_client) {
-				new ClientRequest(connection, this);
-			} else { 
-				new NodeRequest(connection, this);
-			}
+			new Request(connection, this, from_client);
 		}
 	}
 
@@ -135,6 +133,14 @@ public class NodeServer extends Thread {
 	 */
 	public InetSocketAddress getLocalAddress() {
 		return this.local_address;
+	}
+
+	/**
+	 * Gets the ForkJoinPool
+	 * @return The FJP
+	 */
+	public ForkJoinPool getFJP() {
+		return this.fjp;
 	}
 
 	/**
@@ -184,31 +190,24 @@ public class NodeServer extends Thread {
 		Runtime.getRuntime().halt(-1);
 	}
 	
-	/**
-	 * Handles a GET request
-	 * @param request The request string
-	 * @todo This needs to be implemented.
-	 */
-	public ArrayList<MusicObject> getRequest(String request) {
-		return new ArrayList<MusicObject>();
-	}
 }
 
 
-class ClientRequest extends Thread {
-	ForkJoinPool fjp;
+class Request extends Thread {
 	Socket socket;
 	NodeServer svr;
+	boolean is_leader;
 
-	public ClientRequest(Socket connection, NodeServer svr) {
-		System.out.format("\n[C] Client request from: %s\n", connection.getInetAddress().toString());
+	public Request(Socket connection, NodeServer svr, boolean is_leader) {
 		this.socket = connection;
 		this.svr = svr;
+		this.is_leader = is_leader;
 		this.start();
-		this.fjp = new ForkJoinPool();
 	}
 	
 	public void run() {
+		System.out.format("\n[%s] %s request from: %s\n", 
+				(is_leader ? "C" : "N"), (is_leader ? "Client" : "Node"), this.socket.getInetAddress().toString());
 		try {
 			DataInputStream dis = new DataInputStream(this.socket.getInputStream());
 			String request = dis.readUTF();
@@ -221,79 +220,40 @@ class ClientRequest extends Thread {
 	public void parseRequest(String request) throws IOException {
 		Scanner sc = new Scanner(request);
 		switch(sc.next()) {
-			case "PUT":
-				svr.putRequest(request);
-				break;
-			case "KILL":
-				svr.killRequest(request);
-				break;
-			case "GET":
-				getRequest(request);
-				break;
+			case "PUT": 	svr.putRequest(request); break;
+			case "KILL": 	svr.killRequest(request); break; 
+			case "GET": 	getRequest(request, is_leader); break;
 		}
 	}
 
-	private void getRequest(String request) throws IOException {
-		// Block until FJP has initialized
-		while (this.fjp == null) { }
-		// Distribute requests
-		Collection<MusicObject> replies = this.fjp.invoke(new GetTask(request, this.svr));
-		System.out.println("[%] Received replies");
-		// Respond to client
-		ObjectOutputStream oos = new ObjectOutputStream(this.socket.getOutputStream());
-		oos.writeObject(replies);
-		oos.flush();
-	}
-}
+	/**
+	 * Handles a GET request
+	 * @param request The request string
+	 * @todo This needs to be implemented.
+	 */
+	public void getRequest(String request, boolean is_leader) throws IOException {
+		if (is_leader) {
+			// Block until FJP has initialized
+			while (this.svr.getFJP() == null) { }
+			// Distribute requests
+			Collection<MusicObject> replies = this.svr.getFJP().invoke(new GetTask(request, this.svr));
+			System.out.println("[%] Received replies");
+			// Respond to client
+			ObjectOutputStream oos = new ObjectOutputStream(this.socket.getOutputStream());
+			oos.writeObject(replies);
+			oos.flush();
+		} else {
+			// Query node
+			Collection<MusicObject> results = new ArrayList<MusicObject>(); //this.getNode().query();
+			// Respond to leader node
+			ObjectOutputStream oos = new ObjectOutputStream(this.socket.getOutputStream());
+			oos.writeObject(results);
+			oos.flush();
+			System.out.format("[<] Sent node response to: %s\n", this.socket.getInetAddress().toString());
 
-
-class NodeRequest extends Thread {
-	Socket socket;
-	NodeServer svr;
-
-	public NodeRequest(Socket connection, NodeServer svr) {
-		System.out.format("\n[N] Node request from: %s\n", connection.getInetAddress().toString());
-		this.socket = connection;
-		this.svr = svr;
-		this.start();
-	}
-	
-	public void run() {
-		try {
-			DataInputStream dis = new DataInputStream(this.socket.getInputStream());
-			String request = dis.readUTF();
-			System.out.println("[REQEST] " + request);
-
-			parseRequest(request);
-		} catch (IOException e) { e.printStackTrace(); }
-	}
-	
-	public void parseRequest(String request) throws IOException {
-		Scanner sc = new Scanner(request);
-		switch(sc.next()) {
-			case "PUT":
-				svr.putRequest(request);
-				break;
-			case "KILL":
-				svr.killRequest(request);
-				break;
-			case "GET":
-				getRequest(request);
-				break;
 		}
 	}
-
-	public void getRequest(String request) throws IOException {
-		// Query node
-		Collection<MusicObject> results = null; //this.svr.getNode().query();
-		// Respond to leader node
-		ObjectOutputStream oos = new ObjectOutputStream(this.socket.getOutputStream());
-		oos.writeObject(results);
-		oos.flush();
-		System.out.format("[<] Sent node response to: %s\n", this.socket.getInetAddress().toString());
-	}
 }
-
 
 /**
  * A ForkJoinTask for GET requests
@@ -361,6 +321,9 @@ class GetTask extends RecursiveTask<Collection<MusicObject>> {
 				replies.add(task.join());
 			}
 			
+			// Add in server query
+			//this.replies.add(this.svr.getNode().query(this.request));
+
 			// @TODO Perform consensus and return results
 			for (Collection<MusicObject> result : replies) {
 				return result;
@@ -379,7 +342,13 @@ class GetTask extends RecursiveTask<Collection<MusicObject>> {
 				System.out.format("[>] Response received from: %s\n", this.socket.getInetAddress().toString());	
 
 				return response;
-			} catch (Exception e) { e.printStackTrace(); } 
+			} catch (IOException e) { 
+				System.out.format("[!] No response from: %s\n", this.socket.getInetAddress().toString());
+				return new ArrayList<MusicObject>();
+			} catch (ClassNotFoundException e) {
+				System.err.println(e.getMessage());
+				return new ArrayList<MusicObject>();
+			}
 		} else {
 			throw new IllegalStateException("Invalid task.");
 		}
