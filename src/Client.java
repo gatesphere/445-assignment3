@@ -99,7 +99,7 @@ public class Client {
     // reduce
     Integer avg_length = mr1.callReduce(track_lengths);
     System.out.println("Average length is: " + avg_length);
-    System.out.println("alist: " + alist.size() + " entries.");
+    System.out.println("INFO: " + alist.size() + " entries.");
     
     try{Thread.sleep(500);} catch (Exception ex){}
     
@@ -140,7 +140,7 @@ public class Client {
     // reduce
     Integer median_year = mr2.callReduce(years);
     System.out.println("Median year is: " + median_year);
-    System.out.println("alist: " + alist.size() + " entries.");
+    System.out.println("INFO: " + alist.size() + " entries.");
     
     try{Thread.sleep(500);} catch (Exception ex){}
     
@@ -173,7 +173,7 @@ public class Client {
     // reduce
     MusicObject longest = mr3.callReduce(alist);
     System.out.println("Longest track is: " + longest);
-    System.out.println("alist: " + alist.size() + " entries.");
+    System.out.println("INFO: " + alist.size() + " entries.");
     
     try{Thread.sleep(500);} catch (Exception ex){}
     
@@ -200,7 +200,7 @@ public class Client {
     // reduce
     longest = mr3.callReduce(alist);
     System.out.println("Longest track is: " + longest);
-    System.out.println("alist: " + alist.size() + " entries.");
+    System.out.println("INFO: " + alist.size() + " entries.");
   }
   
   
@@ -221,7 +221,6 @@ public class Client {
     //PrintWriter pwo = null;
     DataOutputStream dos = null;
     try {
-      System.out.println("Grabbing dos");
       dos = new DataOutputStream(req.getOutputStream());
       //pwo = new PrintWriter(req.getOutputStream());
     } catch (EOFException ex) {
@@ -246,7 +245,6 @@ public class Client {
     // read in response
     ArrayList<MusicObject> retval = new ArrayList<MusicObject>();
     try {
-      System.out.println("Grabbing ois");
       ois = new ObjectInputStream(req.getInputStream());
       Object ret = ois.readObject();
 
